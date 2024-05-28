@@ -24,3 +24,4 @@ cw2 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+ibc-core-host = { workspace = true }
