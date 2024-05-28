@@ -8,9 +8,9 @@ resolver = "2"
 version       = "0.1.0"
 edition       = "2021"
 license       = "Apache-2.0"
-repository    = "https://github.com/srdtrk/cw-workspace-example"
-rust-version  = "1.73"
-keywords      = ["cosmos", "cosmwasm"]
+repository    = "https://github.com/srdtrk/cw-ibc-lite"
+rust-version  = "1.77"
+keywords      = ["cosmos", "cosmwasm", "ibc"]
 authors       = ["srdtrk <srdtrk@hotmail.com>"]
 
 [profile.release]
