@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use cw_template_minimal::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_ibc_lite_router::types::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

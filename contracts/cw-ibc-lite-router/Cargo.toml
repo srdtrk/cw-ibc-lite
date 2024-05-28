@@ -1,6 +1,6 @@
 [package]
-name = "cw-template-minimal"
-description = "Minimal template for CosmWasm contracts"
+name = "cw-ibc-lite-router"
+description = "IBC Lite Router for CosmWasm"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -12,10 +12,9 @@ license = { workspace = true }
 crate-type = ["cdylib", "rlib"]
 
 [features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-# use library feature to disable all instantiate/execute/query exports
-library = []
+# exclude export feature to disable all instantiate/execute/query exports
+default = ["export"]
+export = []
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
