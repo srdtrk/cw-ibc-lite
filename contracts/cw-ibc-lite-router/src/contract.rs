@@ -34,9 +34,14 @@ pub fn execute(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: ExecuteMsg,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    match msg {
+        ExecuteMsg::SendPacket { .. } => todo!(),
+        ExecuteMsg::RecvPacket { .. } => todo!(),
+        ExecuteMsg::Acknowledgement { .. } => todo!(),
+        ExecuteMsg::Timeout { .. } => todo!(),
+    }
 }
 
 /// Handles the query messages by routing them to the respective handlers.
