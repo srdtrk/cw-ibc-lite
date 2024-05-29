@@ -1,6 +1,6 @@
 //! This module defines the state storage of the Contract.
 
-use super::ContractError;
+use cw_ibc_lite_types::error::ContractError;
 
 use cosmwasm_std::Storage;
 use cw_storage_plus::Map;

@@ -1,3 +1,3 @@
-# CosmWasm Workspace Example
+# CosmWasm IBC Lite
 
-This is an example cargo workspace for a CosmWasm project. It contains a template contract in the `contracts` directory. The goal is to show how to structure a cargo workspace with multiple contracts. I use this as a template for my own projects. If you also need to maintain packages shared between contracts, you can create a `packages` directory and add them there, you'll also need to modify `Cargo.toml` to include them.
+This workspace contains the CosmWasm IBC Lite implementation. IBC lite is a work in progress trimmed down specification of the IBC protocol. It is designed to be simpler to implement and be as secure as the full IBC protocol. Learn more about IBC lite in the [IBC Lite Spec](https://github.com/cosmos/ibc/pull/1093).

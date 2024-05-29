@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "contracts/*",
+    "packages/*",
 ]
 resolver = "2"
 
@@ -39,3 +40,4 @@ schemars = "0.8.16"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
 ibc-core-host = { version = "0.53.0", default-features = false }
+cw-ibc-lite-types = { version = "0.1.0", path = "./packages/types/" }

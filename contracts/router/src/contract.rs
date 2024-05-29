@@ -2,7 +2,8 @@
 
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
-use crate::types::ContractError;
+use cw_ibc_lite_types::error::ContractError;
+
 use crate::types::{
     keys,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},

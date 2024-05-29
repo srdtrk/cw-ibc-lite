@@ -5,7 +5,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, IbcTimeout};
 
-use super::ibc::{Height, Packet};
+use cw_ibc_lite_types::ibc::{Height, Packet};
 
 /// The message to instantiate the contract.
 #[cw_serde]
