@@ -10,10 +10,11 @@ use thiserror::Error;
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+    #[error("{0}")]
+    OwnershipError(#[from] cw_ownable::OwnershipError),
 
     #[error("unauthorized")]
     Unauthorized,
-
     // format!("type: {type_name}; key: {:02x?}", key)
     #[error("not found: {type_name} with key {key:?}")]
     NotFound { type_name: String, key: Vec<u8> },

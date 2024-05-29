@@ -15,3 +15,4 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 ibc-core-host = { workspace = true }
 ibc-client-cw = { workspace = true }
+cw-ownable = { workspace = true }
