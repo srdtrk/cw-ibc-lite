@@ -32,16 +32,63 @@ pub fn instantiate(
 #[allow(clippy::needless_pass_by_value)]
 #[cosmwasm_std::entry_point]
 pub fn execute(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SendPacket { .. } => todo!(),
-        ExecuteMsg::RecvPacket { .. } => todo!(),
-        ExecuteMsg::Acknowledgement { .. } => todo!(),
-        ExecuteMsg::Timeout { .. } => todo!(),
+        ExecuteMsg::SendPacket {
+            source_channel,
+            source_port_id,
+            dest_channel,
+            dest_port_id,
+            data,
+            timeout,
+        } => execute::send_packet(
+            deps,
+            env,
+            info,
+            source_channel,
+            source_port_id,
+            dest_channel,
+            dest_port_id,
+            data,
+            timeout,
+        ),
+        ExecuteMsg::RecvPacket {
+            packet,
+            proof_commitment,
+            proof_height,
+        } => execute::recv_packet(deps, env, info, packet, proof_commitment, proof_height),
+        ExecuteMsg::Acknowledgement {
+            packet,
+            acknowledgement,
+            proof_acked,
+            proof_height,
+        } => execute::acknowledgement(
+            deps,
+            env,
+            info,
+            packet,
+            acknowledgement,
+            proof_acked,
+            proof_height,
+        ),
+        ExecuteMsg::Timeout {
+            packet,
+            proof_unreceived,
+            proof_height,
+            next_sequence_recv,
+        } => execute::timeout(
+            deps,
+            env,
+            info,
+            packet,
+            proof_unreceived,
+            proof_height,
+            next_sequence_recv,
+        ),
     }
 }
 
@@ -55,5 +102,63 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
 }
 
-#[cfg(test)]
-mod tests {}
+mod execute {
+    use super::{ContractError, DepsMut, Env, MessageInfo, Response};
+
+    use cosmwasm_std::{Binary, IbcTimeout};
+
+    use cw_ibc_lite_types::ibc::{Height, Packet};
+
+    #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+    pub fn send_packet(
+        _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
+        _source_channel: String,
+        _source_port_id: String,
+        _dest_channel: String,
+        _dest_port_id: String,
+        _data: Binary,
+        _timeout: IbcTimeout,
+    ) -> Result<Response, ContractError> {
+        todo!()
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn recv_packet(
+        _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
+        _packet: Packet,
+        _proof_commitment: Binary,
+        _proof_height: Height,
+    ) -> Result<Response, ContractError> {
+        todo!()
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn acknowledgement(
+        _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
+        _packet: Packet,
+        _acknowledgement: Binary,
+        _proof_acked: Binary,
+        _proof_height: Height,
+    ) -> Result<Response, ContractError> {
+        todo!()
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn timeout(
+        _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
+        _packet: Packet,
+        _proof_unreceived: Binary,
+        _proof_height: Height,
+        _next_sequence_recv: u64,
+    ) -> Result<Response, ContractError> {
+        todo!()
+    }
+}
