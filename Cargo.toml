@@ -28,16 +28,17 @@ rpath = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-schema = "2.0.1"
-cosmwasm-std = { version = "2.0.1", features = [
+cosmwasm-schema = "1.5.5"
+cosmwasm-std = { version = "1.5.5", features = [
   # Enable this if you only deploy to chains that have CosmWasm 1.4 or higher
   "cosmwasm_1_4",
   "stargate",
 ] }
-cw-storage-plus = "2.0.0"
-cw2 = "2.0.0"
+cw-storage-plus = "1.2.0"
+cw2 = "1.1.2"
 schemars = "0.8.16"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
 ibc-core-host = { version = "0.53.0", default-features = false }
+ibc-client-cw = "0.53.0"
 cw-ibc-lite-types = { version = "0.1.0", path = "./packages/types/" }

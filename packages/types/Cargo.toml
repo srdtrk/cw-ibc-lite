@@ -10,8 +10,8 @@ license = { workspace = true }
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cw-storage-plus = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 ibc-core-host = { workspace = true }
+ibc-client-cw = { workspace = true }

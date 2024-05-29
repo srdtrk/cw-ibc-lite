@@ -2,6 +2,6 @@
 #![deny(missing_docs)]
 #![deny(clippy::nursery, clippy::pedantic, warnings)]
 
-pub mod clients;
-pub mod error;
-pub mod ibc;
+#[cfg(feature = "export")]
+pub mod contract;
+pub mod types;
