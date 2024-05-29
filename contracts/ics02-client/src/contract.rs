@@ -1,12 +1,13 @@
 //! This module handles the execution logic of the contract.
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
 use cw_ibc_lite_types::error::ContractError;
 
 use crate::types::{
     keys,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state,
 };
 
 /// Instantiates a new contract.
@@ -62,8 +63,11 @@ pub fn execute(
 /// Will return an error if the handler returns an error.
 #[allow(clippy::needless_pass_by_value)]
 #[cosmwasm_std::entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::QueryClient { .. } => todo!(),
+        QueryMsg::ClientAddress { client_id } => query::client_address(deps, client_id),
+    }
 }
 
 mod execute {
@@ -72,7 +76,7 @@ mod execute {
     #[allow(clippy::needless_pass_by_value)]
     pub fn create_client(
         _deps: DepsMut,
-        _code_id: String,
+        _code_id: u64,
         _instantiate_msg: cw_ibc_lite_types::clients::InstantiateMsg,
     ) -> Result<Response, ContractError> {
         todo!()
@@ -94,5 +98,20 @@ mod execute {
         _new_client_id: String,
     ) -> Result<Response, ContractError> {
         todo!()
+    }
+}
+
+mod query {
+    use super::{state, Binary, ContractError, Deps};
+
+    use cosmwasm_std::Addr;
+
+    /// Returns the address of the client encoded as a JSON binary.
+    pub fn client_address(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
+        state::CLIENTS
+            .load(deps.storage, client_id)
+            .map(Addr::into_string)
+            .and_then(|s| cosmwasm_std::to_json_binary(&s))
+            .map_err(ContractError::Std)
     }
 }

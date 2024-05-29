@@ -7,7 +7,10 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 /// The message to instantiate the contract.
 /// Sender is assumed to be cw-ibc-lite-routee, and becomes the owner of the contract.
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    /// cw-ibc-lite-ics02-client code id
+    ics02_client_code_id: u64,
+}
 
 /// The execute messages supported by the contract.
 #[cw_serde]
@@ -15,7 +18,7 @@ pub enum ExecuteMsg {
     /// Create a new client.
     CreateClient {
         /// Code id of the light client contract code.
-        code_id: String,
+        code_id: u64,
         /// Instantiate message for the light client contract.
         instantiate_msg: cw_ibc_lite_types::clients::InstantiateMsg,
     },
@@ -46,6 +49,12 @@ pub enum QueryMsg {
         client_id: String,
         /// The query to execute on the client.
         query: cw_ibc_lite_types::clients::QueryMsg,
+    },
+    /// Get the contract address of a client. Returns an error if the client does not exist.
+    #[returns(String)]
+    ClientAddress {
+        /// The client id of the client to get the address of.
+        client_id: String,
     },
 }
 
