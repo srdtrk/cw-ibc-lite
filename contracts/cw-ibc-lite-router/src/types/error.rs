@@ -11,8 +11,21 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    #[error("unauthorized")]
+    Unauthorized,
+
+    // format!("type: {type_name}; key: {:02x?}", key)
+    #[error("not found: {type_name} with key {key:?}")]
+    NotFound { type_name: String, key: Vec<u8> },
+}
+
+impl ContractError {
+    /// Returns a new `ContractError::NotFound` with the given type name and key.
+    #[must_use]
+    pub fn not_found<T>(key: Vec<u8>) -> Self {
+        Self::NotFound {
+            type_name: std::any::type_name::<T>().to_string(),
+            key,
+        }
+    }
 }
