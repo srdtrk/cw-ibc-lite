@@ -28,6 +28,13 @@ pub enum ExecuteMsg {
         /// The message to execute on the client.
         message: cw_ibc_lite_types::clients::ExecuteMsg,
     },
+    /// Migrate the underlying client
+    MigrateClient {
+        /// The client id of the client to migrate.
+        client_id: String,
+        /// The new client id to migrate to.
+        new_client_id: String,
+    },
 }
 
 /// The query messages supported by the contract.
