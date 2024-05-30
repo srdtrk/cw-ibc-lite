@@ -5,3 +5,4 @@
 pub mod clients;
 pub mod error;
 pub mod ibc;
+pub mod storage;
