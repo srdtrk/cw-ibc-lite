@@ -9,3 +9,6 @@ pub const NEXT_CLIENT_NUM: Item<u64> = Item::new("client_num");
 /// `CLIENTS` is the map of all client ids to their contract address.
 /// The reverse mapping should not be needed as the client should be responding with a reply.
 pub const CLIENTS: Map<String, Addr> = Map::new("clients");
+
+/// `COUNTERPARTY` is the map of all client ids to their counterparty client id.
+pub const COUNTERPARTY: Map<String, String> = Map::new("counterparty");

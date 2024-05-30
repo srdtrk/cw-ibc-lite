@@ -32,6 +32,7 @@ pub enum ExecuteMsg {
 
 /// Query messages supported by all light client contracts in ibc-lite
 #[derive(QueryResponses)]
+#[cw_ownable::cw_ownable_query]
 #[cw_serde]
 pub enum QueryMsg {
     /// Get the status of the client
