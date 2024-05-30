@@ -42,4 +42,5 @@ thiserror = { version = "1.0.58" }
 cw-ownable = "0.5.1"
 ibc-core-host = { version = "0.53.0", default-features = false }
 ibc-client-cw = "0.53.0"
+ibc-client-tendermint = { version = "0.53.0", default-features = false, features = ["std", "serde", "schema"] }
 cw-ibc-lite-types = { version = "0.1.0", path = "./packages/types/" }

@@ -91,3 +91,38 @@ pub mod query_responses {
         pub found_misbehaviour: bool,
     }
 }
+
+impl From<InstantiateMsg> for ibc_client_cw::types::InstantiateMsg {
+    fn from(instantiate_msg: InstantiateMsg) -> Self {
+        Self {
+            client_state: instantiate_msg.client_state.into(),
+            consensus_state: instantiate_msg.consensus_state.into(),
+            // TODO: Add checksum
+            checksum: Vec::new(),
+        }
+    }
+}
+
+impl From<ExecuteMsg> for ibc_client_cw::types::SudoMsg {
+    fn from(execute_msg: ExecuteMsg) -> Self {
+        match execute_msg {
+            ExecuteMsg::UpdateState(msg) => Self::UpdateState(msg),
+            ExecuteMsg::UpdateStateOnMisbehaviour(msg) => Self::UpdateStateOnMisbehaviour(msg),
+            ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => Self::VerifyUpgradeAndUpdateState(msg),
+            ExecuteMsg::VerifyMembership(msg) => Self::VerifyMembership(msg),
+            ExecuteMsg::VerifyNonMembership(msg) => Self::VerifyNonMembership(msg),
+        }
+    }
+}
+
+impl From<QueryMsg> for ibc_client_cw::types::QueryMsg {
+    fn from(query_msg: QueryMsg) -> Self {
+        match query_msg {
+            QueryMsg::Status(msg) => Self::Status(msg),
+            QueryMsg::ExportMetadata(msg) => Self::ExportMetadata(msg),
+            QueryMsg::TimestampAtHeight(msg) => Self::TimestampAtHeight(msg),
+            QueryMsg::VerifyClientMessage(msg) => Self::VerifyClientMessage(msg),
+            QueryMsg::CheckForMisbehaviour(msg) => Self::CheckForMisbehaviour(msg),
+        }
+    }
+}

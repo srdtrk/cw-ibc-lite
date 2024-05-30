@@ -30,3 +30,9 @@ impl ContractError {
         }
     }
 }
+
+impl From<ibc_client_cw::types::ContractError> for ContractError {
+    fn from(error: ibc_client_cw::types::ContractError) -> Self {
+        Self::Std(error.into())
+    }
+}

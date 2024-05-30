@@ -266,6 +266,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "curve25519-dalek-ng"
+version = "4.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c359b7249347e46fb28804470d071c921156ad62b3eef5d34e2ba867533dec8"
+dependencies = [
+ "byteorder",
+ "digest 0.9.0",
+ "rand_core 0.6.4",
+ "subtle-ng",
+ "zeroize",
+]
+
+[[package]]
 name = "cw-address-like"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -285,6 +298,24 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "ibc-client-cw",
+ "ibc-core-host",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-ibc-lite-ics07-tendermint"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-ibc-lite-types",
+ "cw-ownable",
+ "cw-storage-plus",
+ "cw2",
+ "ibc-client-cw",
+ "ibc-client-tendermint",
  "ibc-core-host",
  "schemars",
  "serde",
@@ -491,6 +522,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ed25519-consensus"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c8465edc8ee7436ffea81d21a019b16676ee3db267aa8d5a8d729581ecf998b"
+dependencies = [
+ "curve25519-dalek-ng",
+ "hex",
+ "rand_core 0.6.4",
+ "sha2 0.9.9",
+ "zeroize",
+]
+
+[[package]]
 name = "ed25519-zebra"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -687,6 +731,42 @@ dependencies = [
  "ibc-core",
  "prost",
  "serde",
+]
+
+[[package]]
+name = "ibc-client-tendermint"
+version = "0.53.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "804dcd81f62608c453e72f669b2df986eb49d4b4381deac2a70bd33ee94cef7f"
+dependencies = [
+ "derive_more",
+ "ibc-client-tendermint-types",
+ "ibc-core-client",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
+ "ibc-primitives",
+ "serde",
+ "tendermint",
+ "tendermint-light-client-verifier",
+]
+
+[[package]]
+name = "ibc-client-tendermint-types"
+version = "0.53.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54b41444137be02cabc484079443f447d23e746fabd9ac6fd5d99faac0b30a5f"
+dependencies = [
+ "displaydoc",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-host-types",
+ "ibc-primitives",
+ "ibc-proto",
+ "serde",
+ "tendermint",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
 ]
 
 [[package]]
@@ -1418,6 +1498,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "subtle-ng"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1448,6 +1534,7 @@ dependencies = [
  "bytes",
  "digest 0.10.7",
  "ed25519",
+ "ed25519-consensus",
  "flex-error",
  "futures",
  "num-traits",
@@ -1458,12 +1545,26 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "serde_repr",
+ "sha2 0.10.8",
  "signature",
  "subtle",
  "subtle-encoding",
  "tendermint-proto",
  "time",
  "zeroize",
+]
+
+[[package]]
+name = "tendermint-light-client-verifier"
+version = "0.36.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4216e487165e5dbd7af79952eaa0d5f06c5bde861eb76c690acd7f2d2a19395c"
+dependencies = [
+ "derive_more",
+ "flex-error",
+ "serde",
+ "tendermint",
+ "time",
 ]
 
 [[package]]
