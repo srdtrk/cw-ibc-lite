@@ -8,6 +8,8 @@ use ibc_client_cw::types::{
     VerifyMembershipMsgRaw, VerifyNonMembershipMsgRaw, VerifyUpgradeAndUpdateStateMsgRaw,
 };
 
+use crate::error::ContractError;
+
 /// Instantiate message for all light client contracts in ibc-lite
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -26,12 +28,6 @@ pub enum ExecuteMsg {
     UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
     /// Verify upgrade and update the client state
     VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsgRaw),
-    /// Verify membership
-    // TODO: Move this to QueryMsg
-    VerifyMembership(VerifyMembershipMsgRaw),
-    /// Verify non-membership
-    // TODO: Move this to QueryMsg
-    VerifyNonMembership(VerifyNonMembershipMsgRaw),
 }
 
 /// Query messages supported by all light client contracts in ibc-lite
@@ -53,17 +49,24 @@ pub enum QueryMsg {
     /// Check for misbehaviour
     #[returns(query_responses::CheckForMisbehaviour)]
     CheckForMisbehaviour(CheckForMisbehaviourMsgRaw),
+    /// Verify membership
+    #[returns(ibc_client_cw::types::ContractResult)]
+    VerifyMembership(VerifyMembershipMsgRaw),
+    /// Verify non-membership
+    #[returns(ibc_client_cw::types::ContractResult)]
+    VerifyNonMembership(VerifyNonMembershipMsgRaw),
 }
 
 /// Contains the query responses supported by all light client contracts in ibc-lite
 pub mod query_responses {
-    use super::cw_serde;
+    use super::{cw_serde, ContractError};
     use ibc_client_cw::types::GenesisMetadata;
 
     /// The response to [`super::QueryMsg::Status`]
     #[cw_serde]
     pub struct Status {
         /// The status of the client
+        // TODO: Turn this into an enum
         pub status: String,
     }
     /// The response to [`super::QueryMsg::ExportMetadata`]
@@ -90,6 +93,107 @@ pub mod query_responses {
         /// Whether misbehaviour was found
         pub found_misbehaviour: bool,
     }
+
+    impl TryFrom<ibc_client_cw::types::QueryResponse> for Status {
+        type Error = ContractError;
+
+        fn try_from(
+            query_response: ibc_client_cw::types::QueryResponse,
+        ) -> Result<Self, Self::Error> {
+            if !query_response.is_valid {
+                return Err(ContractError::try_from::<
+                    ibc_client_cw::types::QueryResponse,
+                    Self,
+                >());
+            }
+
+            Ok(Self {
+                status: query_response.status.ok_or_else(|| {
+                    ContractError::try_from::<ibc_client_cw::types::QueryResponse, Self>()
+                })?,
+            })
+        }
+    }
+
+    impl TryFrom<ibc_client_cw::types::QueryResponse> for ExportMetadata {
+        type Error = ContractError;
+
+        fn try_from(
+            query_response: ibc_client_cw::types::QueryResponse,
+        ) -> Result<Self, Self::Error> {
+            if !query_response.is_valid {
+                return Err(ContractError::try_from::<
+                    ibc_client_cw::types::QueryResponse,
+                    Self,
+                >());
+            }
+
+            Ok(Self {
+                metadata: query_response.genesis_metadata.ok_or_else(|| {
+                    ContractError::try_from::<ibc_client_cw::types::QueryResponse, Self>()
+                })?,
+            })
+        }
+    }
+
+    impl TryFrom<ibc_client_cw::types::QueryResponse> for TimestampAtHeight {
+        type Error = ContractError;
+
+        fn try_from(
+            query_response: ibc_client_cw::types::QueryResponse,
+        ) -> Result<Self, Self::Error> {
+            if !query_response.is_valid {
+                return Err(ContractError::try_from::<
+                    ibc_client_cw::types::QueryResponse,
+                    Self,
+                >());
+            }
+
+            Ok(Self {
+                timestamp: query_response.timestamp.ok_or_else(|| {
+                    ContractError::try_from::<ibc_client_cw::types::QueryResponse, Self>()
+                })?,
+            })
+        }
+    }
+
+    impl TryFrom<ibc_client_cw::types::QueryResponse> for VerifyClientMessage {
+        type Error = ContractError;
+
+        fn try_from(
+            query_response: ibc_client_cw::types::QueryResponse,
+        ) -> Result<Self, Self::Error> {
+            if !query_response.is_valid {
+                return Err(ContractError::try_from::<
+                    ibc_client_cw::types::QueryResponse,
+                    Self,
+                >());
+            }
+
+            Ok(Self { is_valid: true })
+        }
+    }
+
+    impl TryFrom<ibc_client_cw::types::QueryResponse> for CheckForMisbehaviour {
+        type Error = ContractError;
+
+        fn try_from(
+            query_response: ibc_client_cw::types::QueryResponse,
+        ) -> Result<Self, Self::Error> {
+            if !query_response.is_valid {
+                return Err(ContractError::try_from::<
+                    ibc_client_cw::types::QueryResponse,
+                    Self,
+                >());
+            }
+
+            Ok(Self {
+                found_misbehaviour: query_response.found_misbehaviour.ok_or_else(|| {
+                    ContractError::try_from::<ibc_client_cw::types::QueryResponse, Self>()
+                })?,
+            })
+        }
+    }
 }
 
 impl From<InstantiateMsg> for ibc_client_cw::types::InstantiateMsg {
@@ -109,20 +213,33 @@ impl From<ExecuteMsg> for ibc_client_cw::types::SudoMsg {
             ExecuteMsg::UpdateState(msg) => Self::UpdateState(msg),
             ExecuteMsg::UpdateStateOnMisbehaviour(msg) => Self::UpdateStateOnMisbehaviour(msg),
             ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => Self::VerifyUpgradeAndUpdateState(msg),
-            ExecuteMsg::VerifyMembership(msg) => Self::VerifyMembership(msg),
-            ExecuteMsg::VerifyNonMembership(msg) => Self::VerifyNonMembership(msg),
         }
     }
 }
 
-impl From<QueryMsg> for ibc_client_cw::types::QueryMsg {
-    fn from(query_msg: QueryMsg) -> Self {
+impl TryFrom<QueryMsg> for ibc_client_cw::types::QueryMsg {
+    type Error = ContractError;
+
+    fn try_from(query_msg: QueryMsg) -> Result<Self, Self::Error> {
         match query_msg {
-            QueryMsg::Status(msg) => Self::Status(msg),
-            QueryMsg::ExportMetadata(msg) => Self::ExportMetadata(msg),
-            QueryMsg::TimestampAtHeight(msg) => Self::TimestampAtHeight(msg),
-            QueryMsg::VerifyClientMessage(msg) => Self::VerifyClientMessage(msg),
-            QueryMsg::CheckForMisbehaviour(msg) => Self::CheckForMisbehaviour(msg),
+            QueryMsg::Status(msg) => Ok(Self::Status(msg)),
+            QueryMsg::ExportMetadata(msg) => Ok(Self::ExportMetadata(msg)),
+            QueryMsg::TimestampAtHeight(msg) => Ok(Self::TimestampAtHeight(msg)),
+            QueryMsg::VerifyClientMessage(msg) => Ok(Self::VerifyClientMessage(msg)),
+            QueryMsg::CheckForMisbehaviour(msg) => Ok(Self::CheckForMisbehaviour(msg)),
+            _ => Err(ContractError::try_from::<QueryMsg, Self>()),
+        }
+    }
+}
+
+impl TryFrom<QueryMsg> for ibc_client_cw::types::SudoMsg {
+    type Error = ContractError;
+
+    fn try_from(query_msg: QueryMsg) -> Result<Self, Self::Error> {
+        match query_msg {
+            QueryMsg::VerifyMembership(msg) => Ok(Self::VerifyMembership(msg)),
+            QueryMsg::VerifyNonMembership(msg) => Ok(Self::VerifyNonMembership(msg)),
+            _ => Err(ContractError::try_from::<QueryMsg, Self>()),
         }
     }
 }

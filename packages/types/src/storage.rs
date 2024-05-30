@@ -68,3 +68,58 @@ impl PureItem {
         querier.query_wasm_raw(remote_contract, self.as_slice())
     }
 }
+
+/// Includes the helpers for constructing a [`cosmwasm_std::DepsMut`] from an [`cosmwasm_std::Deps`].
+pub mod mock_mut {
+    use cosmwasm_std::{Api, QuerierWrapper};
+
+    use super::Storage;
+
+    /// A storage implementation that wraps a reference to a storage implementation and
+    /// no-ops on all write operations.
+    #[allow(clippy::module_name_repetitions)]
+    pub struct MockMutStorage<'a> {
+        underlying: &'a dyn Storage,
+    }
+
+    impl<'a> MockMutStorage<'a> {
+        /// Creates a new [`MockMutStorage`] with the given underlying storage.
+        pub const fn new(underlying: &'a dyn Storage) -> Self {
+            Self { underlying }
+        }
+
+        /// Converts this [`MockMutStorage`] into a [`cosmwasm_std::DepsMut`] using the given API and querier.
+        pub fn to_deps_mut(
+            &'a mut self,
+            api: &'a dyn Api,
+            querier: &'a QuerierWrapper,
+        ) -> cosmwasm_std::DepsMut<'a> {
+            cosmwasm_std::DepsMut {
+                storage: self,
+                api,
+                querier: querier.to_owned(),
+            }
+        }
+    }
+
+    impl Storage for MockMutStorage<'_> {
+        fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+            self.underlying.get(key)
+        }
+
+        // no-op
+        fn set(&mut self, _key: &[u8], _value: &[u8]) {}
+
+        // no-op
+        fn remove(&mut self, _key: &[u8]) {}
+
+        fn range<'a>(
+            &'a self,
+            start: Option<&[u8]>,
+            end: Option<&[u8]>,
+            order: cosmwasm_std::Order,
+        ) -> Box<dyn Iterator<Item = cosmwasm_std::Record> + 'a> {
+            self.underlying.range(start, end, order)
+        }
+    }
+}
