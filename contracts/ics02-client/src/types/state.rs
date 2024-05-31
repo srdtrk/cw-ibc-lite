@@ -3,15 +3,35 @@
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
 
-/// `NEXT_CLIENT_NUM` is the item that stores the next client number.
-pub const NEXT_CLIENT_NUM: Item<u64> = Item::new("client_num");
+/// `NEXT_CLIENT_NUMBER` is the item that stores the next client number.
+pub const NEXT_CLIENT_NUMBER: Item<u64> = Item::new("client_number");
 
 /// `CLIENTS` is the map of all client ids to their contract address.
 /// The reverse mapping should not be needed as the client should be responding with a reply.
-pub const CLIENTS: Map<String, Addr> = Map::new("clients");
+pub const CLIENTS: Map<&str, Addr> = Map::new("clients");
 
 /// `COUNTERPARTY` is the map of all client ids to their counterparty client id.
-pub const COUNTERPARTY: Map<String, String> = Map::new("counterparty");
+pub const COUNTERPARTY: Map<&str, String> = Map::new("counterparty");
 
 /// `CREATORS` is the map of all client ids to their creator address.
-pub const CREATORS: Map<String, Addr> = Map::new("creators");
+pub const CREATORS: Map<&str, Addr> = Map::new("creators");
+
+/// Contains state storage helpers.
+pub mod helpers {
+    use cosmwasm_std::{StdResult, Storage};
+
+    use crate::types::keys;
+
+    /// Generates a new client id and increments the client number.
+    ///
+    /// # Errors
+    /// Returns an error if the client number cannot be loaded or saved.
+    pub fn new_client_id(storage: &mut dyn Storage) -> StdResult<String> {
+        let client_number = super::NEXT_CLIENT_NUMBER
+            .may_load(storage)?
+            .unwrap_or_default();
+        super::NEXT_CLIENT_NUMBER.save(storage, &(client_number + 1))?;
+
+        Ok(format!("{}{}", keys::CLIENT_ID_PREFIX, client_number))
+    }
+}

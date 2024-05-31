@@ -36,7 +36,7 @@ pub fn instantiate(
 #[cosmwasm_std::entry_point]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -47,18 +47,18 @@ pub fn execute(
             code_id,
             instantiate_msg,
             counterparty_id,
-        } => execute::create_client(deps, code_id, instantiate_msg, counterparty_id),
+        } => execute::create_client(deps, env, info, code_id, instantiate_msg, counterparty_id),
         ExecuteMsg::ExecuteClient { client_id, message } => {
-            execute::execute_client(deps, client_id, message)
+            execute::execute_client(deps, env, info, client_id, message)
         }
         ExecuteMsg::MigrateClient {
             client_id,
             new_client_id,
-        } => execute::migrate_client(deps, client_id, new_client_id),
+        } => execute::migrate_client(deps, env, info, client_id, new_client_id),
         ExecuteMsg::ProvideCounterparty {
             client_id,
             counterparty_id,
-        } => execute::provide_counterparty(deps, client_id, counterparty_id),
+        } => execute::provide_counterparty(deps, env, info, client_id, counterparty_id),
     }
 }
 
@@ -76,21 +76,58 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 }
 
 mod execute {
-    use super::{ContractError, DepsMut, Response};
+    use super::{state, ContractError, DepsMut, Env, MessageInfo, Response};
+
+    use crate::types::events;
+
+    use cw_ibc_lite_types::clients::helpers;
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn create_client(
-        _deps: DepsMut,
-        _code_id: u64,
-        _instantiate_msg: cw_ibc_lite_types::clients::msg::InstantiateMsg,
-        _counterparty_id: Option<String>,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        code_id: u64,
+        instantiate_msg: cw_ibc_lite_types::clients::msg::InstantiateMsg,
+        counterparty_id: Option<String>,
     ) -> Result<Response, ContractError> {
-        todo!()
+        let client_id = state::helpers::new_client_id(deps.storage)?;
+
+        state::CREATORS.save(deps.storage, &client_id, &info.sender)?;
+        if let Some(counterparty_id) = &counterparty_id {
+            state::COUNTERPARTY.save(deps.storage, &client_id, counterparty_id)?;
+        }
+
+        // Instantiate the light client.
+        let client_code = helpers::LightClientCode::new(code_id);
+        let (instantiate2, address) = client_code.instantiate2(
+            deps.api,
+            &deps.querier,
+            &env,
+            instantiate_msg,
+            // TODO: Make sure there is no DOS vector here.
+            &client_id,
+            Some(&env.contract.address),
+            &client_id,
+        )?;
+
+        state::CLIENTS.save(deps.storage, &client_id, &address)?;
+
+        Ok(Response::new()
+            .add_message(instantiate2)
+            .add_event(events::create_client::success(
+                &client_id,
+                &counterparty_id.unwrap_or_default(),
+                info.sender.as_str(),
+                address.as_str(),
+            )))
     }
 
     #[allow(clippy::needless_pass_by_value, clippy::module_name_repetitions)]
     pub fn execute_client(
         _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
         _client_id: String,
         _message: cw_ibc_lite_types::clients::msg::ExecuteMsg,
     ) -> Result<Response, ContractError> {
@@ -100,6 +137,8 @@ mod execute {
     #[allow(clippy::needless_pass_by_value)]
     pub fn migrate_client(
         _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
         _client_id: String,
         _new_client_id: String,
     ) -> Result<Response, ContractError> {
@@ -109,6 +148,8 @@ mod execute {
     #[allow(clippy::needless_pass_by_value)]
     pub fn provide_counterparty(
         _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
         _client_id: String,
         _counterparty_id: String,
     ) -> Result<Response, ContractError> {
@@ -122,9 +163,10 @@ mod query {
     use cosmwasm_std::Addr;
 
     /// Returns the address of the client encoded as a JSON binary.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn client_address(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
         state::CLIENTS
-            .load(deps.storage, client_id)
+            .load(deps.storage, &client_id)
             .map(Addr::into_string)
             .and_then(|s| cosmwasm_std::to_json_binary(&s))
             .map_err(ContractError::Std)
