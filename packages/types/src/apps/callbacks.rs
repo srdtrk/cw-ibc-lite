@@ -67,7 +67,7 @@ impl IbcAppCallbackMsg {
         cosmwasm_std::to_json_binary(&msg)
     }
 
-    /// `into_cosmos_msg` converts this message into a [`CosmosMsg`] message to be sent to
+    /// `into_cosmos_msg` converts this message into a [`cosmwasm_std::CosmosMsg`] message to be sent to
     /// the named contract.
     ///
     /// # Errors
