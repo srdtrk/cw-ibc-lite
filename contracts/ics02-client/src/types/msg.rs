@@ -54,6 +54,8 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Execute a query on a client.
+    /// Instead of using this message from external contracts, it is recommended to use
+    /// [`crate::helpers::Ics02ClientContractQuerier::client_querier`] to query the client.
     #[returns(query_responses::QueryClient)]
     QueryClient {
         /// The client id of the client to execute the query on.

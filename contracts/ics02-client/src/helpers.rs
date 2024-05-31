@@ -1,6 +1,7 @@
 //! This file contains helper functions for working with this contract from
 //! external contracts.
 
+use cw_ibc_lite_types::clients::helpers::LightClientContractQuerier;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -168,6 +169,22 @@ impl<'a> Ics02ClientContractQuerier<'a> {
         Self { querier, addr }
     }
 
+    /// `client_querier` creates a new [`LightClientContractQuerier`] for the client with the given
+    /// identifier. This should be used to query the client contract rather than [`Ics02ClientContractQuerier::query_client`].
+    ///
+    /// # Errors
+    /// This function returns an error if the client address cannot be loaded.
+    pub fn client_querier(
+        &self,
+        client_id: impl Into<String>,
+    ) -> StdResult<LightClientContractQuerier> {
+        let client_address = self.client_info(client_id)?.address;
+        Ok(LightClientContractQuerier::new(
+            self.querier,
+            client_address,
+        ))
+    }
+
     /// `client_address` sends a [`msg::QueryMsg::ClientAddress`] query to this contract.
     /// It returns the address of the client contract with the given client id.
     ///
@@ -186,7 +203,7 @@ impl<'a> Ics02ClientContractQuerier<'a> {
         )
     }
 
-    /// `query_query_client` sends a [`msg::QueryMsg::QueryClient`] query to this contract.
+    /// `query_client` sends a [`msg::QueryMsg::QueryClient`] query to this contract.
     /// It returns the result of the query on the client contract with the given client id.
     ///
     /// # Errors
