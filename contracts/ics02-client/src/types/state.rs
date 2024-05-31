@@ -12,3 +12,6 @@ pub const CLIENTS: Map<String, Addr> = Map::new("clients");
 
 /// `COUNTERPARTY` is the map of all client ids to their counterparty client id.
 pub const COUNTERPARTY: Map<String, String> = Map::new("counterparty");
+
+/// `CREATORS` is the map of all client ids to their creator address.
+pub const CREATORS: Map<String, Addr> = Map::new("creators");

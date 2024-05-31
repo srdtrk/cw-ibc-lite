@@ -21,6 +21,10 @@ pub enum ExecuteMsg {
         code_id: u64,
         /// Instantiate message for the light client contract.
         instantiate_msg: cw_ibc_lite_types::clients::InstantiateMsg,
+        /// The optional counterparty id. If provided, the client will be provided with the counterparty.
+        /// If not provided, the counterparty must be provided later using the `ProvideCounterparty` message.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        counterparty_id: Option<String>,
     },
     /// Execute a message on a client.
     ExecuteClient {
@@ -35,6 +39,13 @@ pub enum ExecuteMsg {
         client_id: String,
         /// The new client id to migrate to.
         new_client_id: String,
+    },
+    /// Provide the counterparty for a client.
+    ProvideCounterparty {
+        /// The client id of the client to provide the counterparty for.
+        client_id: String,
+        /// The counterparty client id.
+        counterparty_id: String,
     },
 }
 

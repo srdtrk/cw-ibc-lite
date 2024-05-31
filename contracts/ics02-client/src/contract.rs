@@ -46,7 +46,8 @@ pub fn execute(
         ExecuteMsg::CreateClient {
             code_id,
             instantiate_msg,
-        } => execute::create_client(deps, code_id, instantiate_msg),
+            counterparty_id,
+        } => execute::create_client(deps, code_id, instantiate_msg, counterparty_id),
         ExecuteMsg::ExecuteClient { client_id, message } => {
             execute::execute_client(deps, client_id, message)
         }
@@ -54,6 +55,10 @@ pub fn execute(
             client_id,
             new_client_id,
         } => execute::migrate_client(deps, client_id, new_client_id),
+        ExecuteMsg::ProvideCounterparty {
+            client_id,
+            counterparty_id,
+        } => execute::provide_counterparty(deps, client_id, counterparty_id),
     }
 }
 
@@ -78,6 +83,7 @@ mod execute {
         _deps: DepsMut,
         _code_id: u64,
         _instantiate_msg: cw_ibc_lite_types::clients::InstantiateMsg,
+        _counterparty_id: Option<String>,
     ) -> Result<Response, ContractError> {
         todo!()
     }
@@ -96,6 +102,15 @@ mod execute {
         _deps: DepsMut,
         _client_id: String,
         _new_client_id: String,
+    ) -> Result<Response, ContractError> {
+        todo!()
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn provide_counterparty(
+        _deps: DepsMut,
+        _client_id: String,
+        _counterparty_id: String,
     ) -> Result<Response, ContractError> {
         todo!()
     }
