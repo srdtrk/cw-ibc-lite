@@ -12,8 +12,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{
-    instantiate2_address, to_json_binary, Addr, Api, CosmosMsg, Env, QuerierWrapper, StdError,
-    StdResult, WasmMsg,
+    instantiate2_address, to_json_binary, Addr, Api, CosmosMsg, Env, QuerierWrapper, QueryRequest,
+    StdError, StdResult, WasmMsg,
 };
 
 /// `LightClientContract` is a wrapper around Addr that provides helpers
@@ -254,5 +254,31 @@ impl<'a> LightClientContractQuerier<'a> {
     ) -> StdResult<ContractResult> {
         self.querier
             .query_wasm_smart(&self.addr, &msg::QueryMsg::VerifyNonMembership(msg.into()))
+    }
+
+    /// `smart_raw` sends a [`msg::QueryMsg`] query to this contract.
+    /// It returns the raw [`cosmwasm_std::Binary`] response from the contract.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn smart_raw(&self, msg: impl Into<msg::QueryMsg>) -> StdResult<cosmwasm_std::Binary> {
+        let request: QueryRequest<cosmwasm_std::Empty> = cosmwasm_std::WasmQuery::Smart {
+            contract_addr: self.addr.clone(),
+            msg: to_json_binary(&msg.into())?,
+        }
+        .into();
+
+        match self
+            .querier
+            .raw_query(&cosmwasm_std::to_json_vec(&request)?)
+        {
+            cosmwasm_std::SystemResult::Err(system_err) => Err(StdError::generic_err(format!(
+                "Querier system error: {system_err}"
+            ))),
+            cosmwasm_std::SystemResult::Ok(cosmwasm_std::ContractResult::Err(contract_err)) => Err(
+                StdError::generic_err(format!("Querier contract error: {contract_err}")),
+            ),
+            cosmwasm_std::SystemResult::Ok(cosmwasm_std::ContractResult::Ok(value)) => Ok(value),
+        }
     }
 }
