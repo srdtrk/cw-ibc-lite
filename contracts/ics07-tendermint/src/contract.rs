@@ -81,7 +81,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 mod query {
-    use cw_ibc_lite_types::{clients::query_responses, storage::mock_mut::MockMutStorage};
+    use cw_ibc_lite_types::{clients::msg::query_responses, storage::mock_mut::MockMutStorage};
 
     use ibc_client_cw::types::{QueryMsg as TendermintQueryMsg, QueryResponse};
 

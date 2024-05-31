@@ -1,5 +1,12 @@
-//! This file contains helper functions for working with this contract from
-//! external contracts.
+//! This file contains helper functions for working with ibc-lite light client contracts
+//! from external contracts.
+
+use super::msg::{self, query_responses};
+
+use ibc_client_cw::types::{
+    CheckForMisbehaviourMsgRaw, ContractResult, ExportMetadataMsg, StatusMsg, TimestampAtHeightMsg,
+    VerifyClientMessageRaw, VerifyMembershipMsgRaw, VerifyNonMembershipMsgRaw,
+};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,29 +16,27 @@ use cosmwasm_std::{
     StdResult, WasmMsg,
 };
 
-use crate::types::msg;
-
-/// `Ics02ClientContract` is a wrapper around Addr that provides helpers
+/// `LightClientContract` is a wrapper around Addr that provides helpers
 /// for working with this contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Ics02ClientContract(pub Addr);
+pub struct LightClientContract(pub Addr);
 
-/// `Ics02ClientCode` is a wrapper around u64 that provides helpers for
+/// `LightClientCode` is a wrapper around u64 that provides helpers for
 /// initializing this contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Ics02ClientCode(pub u64);
+pub struct LightClientCode(pub u64);
 
-/// `Ics02ClientContractQuerier` is a wrapper around [`QuerierWrapper`] that provides
+/// `LightClientContractQuerier` is a wrapper around [`QuerierWrapper`] that provides
 /// helpers for querying this contract.
 ///
-/// This can be constructed by [`Ics02ClientContract::query`] or [`Ics02ClientContractQuerier::new`].
-pub struct Ics02ClientContractQuerier<'a> {
+/// This can be constructed by [`LightClientContract::query`] or [`LightClientContractQuerier::new`].
+pub struct LightClientContractQuerier<'a> {
     querier: &'a QuerierWrapper<'a>,
     addr: String,
 }
 
-impl Ics02ClientContract {
-    /// Creates a new [`Ics02ClientContract`]
+impl LightClientContract {
+    /// Creates a new [`LightClientContract`]
     #[must_use]
     pub const fn new(addr: Addr) -> Self {
         Self(addr)
@@ -58,10 +63,10 @@ impl Ics02ClientContract {
         .into())
     }
 
-    /// `query` creates a new [`Ics02ClientContractQuerier`] for this contract.
+    /// `query` creates a new [`LightClientContractQuerier`] for this contract.
     #[must_use]
-    pub fn query<'a>(&self, querier: &'a QuerierWrapper) -> Ics02ClientContractQuerier<'a> {
-        Ics02ClientContractQuerier::new(querier, self.addr().into_string())
+    pub fn query<'a>(&self, querier: &'a QuerierWrapper) -> LightClientContractQuerier<'a> {
+        LightClientContractQuerier::new(querier, self.addr().into_string())
     }
 
     /// `update_admin` creates a [`WasmMsg::UpdateAdmin`] message targeting this contract
@@ -83,8 +88,8 @@ impl Ics02ClientContract {
     }
 }
 
-impl Ics02ClientCode {
-    /// `new` creates a new [`Ics02ClientCode`]
+impl LightClientCode {
+    /// `new` creates a new [`LightClientCode`]
     #[must_use]
     pub const fn new(code_id: u64) -> Self {
         Self(code_id)
@@ -161,45 +166,93 @@ impl Ics02ClientCode {
     }
 }
 
-impl<'a> Ics02ClientContractQuerier<'a> {
-    /// Creates a new [`Ics02ClientContractQuerier`]
+impl<'a> LightClientContractQuerier<'a> {
+    /// Creates a new [`LightClientContractQuerier`]
     #[must_use]
     pub const fn new(querier: &'a QuerierWrapper<'a>, addr: String) -> Self {
         Self { querier, addr }
     }
 
-    /// `client_address` sends a [`msg::QueryMsg::ClientAddress`] query to this contract.
-    /// It returns the address of the client contract with the given client id.
+    /// `status` sends a [`msg::QueryMsg::Status`] query to this contract.
     ///
     /// # Errors
     ///
     /// This function returns an error if the query fails
-    pub fn client_address(&self, client_id: impl Into<String>) -> StdResult<String> {
-        self.querier.query_wasm_smart(
-            &self.addr,
-            &msg::QueryMsg::ClientAddress {
-                client_id: client_id.into(),
-            },
-        )
+    pub fn status(&self, status_msg: impl Into<StatusMsg>) -> StdResult<query_responses::Status> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::Status(status_msg.into()))
     }
 
-    /// `query_query_client` sends a [`msg::QueryMsg::QueryClient`] query to this contract.
-    /// It returns the result of the query on the client contract with the given client id.
+    /// `export_metadata` sends a [`msg::QueryMsg::ExportMetadata`] query to this contract.
     ///
     /// # Errors
     ///
     /// This function returns an error if the query fails
-    pub fn query_client(
+    pub fn export_metadata(
         &self,
-        client_id: impl Into<String>,
-        query: impl Into<cw_ibc_lite_types::clients::msg::QueryMsg>,
-    ) -> StdResult<msg::query_responses::QueryClient> {
-        self.querier.query_wasm_smart(
-            &self.addr,
-            &msg::QueryMsg::QueryClient {
-                client_id: client_id.into(),
-                query: query.into(),
-            },
-        )
+        msg: impl Into<ExportMetadataMsg>,
+    ) -> StdResult<query_responses::ExportMetadata> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::ExportMetadata(msg.into()))
+    }
+
+    /// `timestamp_at_height` sends a [`msg::QueryMsg::TimestampAtHeight`] query to this contract.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn timestamp_at_height(
+        &self,
+        msg: impl Into<TimestampAtHeightMsg>,
+    ) -> StdResult<query_responses::TimestampAtHeight> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::TimestampAtHeight(msg.into()))
+    }
+
+    /// `verify_client_message` sends a [`msg::QueryMsg::VerifyClientMessage`] query to this contract.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn verify_client_message(
+        &self,
+        msg: impl Into<VerifyClientMessageRaw>,
+    ) -> StdResult<query_responses::VerifyClientMessage> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::VerifyClientMessage(msg.into()))
+    }
+
+    /// `check_for_misbehaviour` sends a [`msg::QueryMsg::CheckForMisbehaviour`] query to this contract.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn check_for_misbehaviour(
+        &self,
+        msg: impl Into<CheckForMisbehaviourMsgRaw>,
+    ) -> StdResult<query_responses::CheckForMisbehaviour> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::CheckForMisbehaviour(msg.into()))
+    }
+
+    /// `verify_membership` sends a [`msg::QueryMsg::VerifyMembership`] query to this contract.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn verify_membership(
+        &self,
+        msg: impl Into<VerifyMembershipMsgRaw>,
+    ) -> StdResult<ContractResult> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::VerifyMembership(msg.into()))
+    }
+
+    /// `verify_non_membership` sends a [`msg::QueryMsg::VerifyNonMembership`] query to this contract.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn verify_non_membership(
+        &self,
+        msg: impl Into<VerifyNonMembershipMsgRaw>,
+    ) -> StdResult<ContractResult> {
+        self.querier
+            .query_wasm_smart(&self.addr, &msg::QueryMsg::VerifyNonMembership(msg.into()))
     }
 }

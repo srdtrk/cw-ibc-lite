@@ -82,7 +82,7 @@ mod execute {
     pub fn create_client(
         _deps: DepsMut,
         _code_id: u64,
-        _instantiate_msg: cw_ibc_lite_types::clients::InstantiateMsg,
+        _instantiate_msg: cw_ibc_lite_types::clients::msg::InstantiateMsg,
         _counterparty_id: Option<String>,
     ) -> Result<Response, ContractError> {
         todo!()
@@ -92,7 +92,7 @@ mod execute {
     pub fn execute_client(
         _deps: DepsMut,
         _client_id: String,
-        _message: cw_ibc_lite_types::clients::ExecuteMsg,
+        _message: cw_ibc_lite_types::clients::msg::ExecuteMsg,
     ) -> Result<Response, ContractError> {
         todo!()
     }
