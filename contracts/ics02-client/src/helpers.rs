@@ -222,4 +222,18 @@ impl<'a> Ics02ClientContractQuerier<'a> {
             },
         )
     }
+
+    /// `counterparty` sends a [`msg::QueryMsg::Counterparty`] query to this contract.
+    /// It returns the counterparty of the client contract with the given client id.
+    ///
+    /// # Errors
+    /// This function returns an error if the query fails
+    pub fn counterparty(&self, client_id: impl Into<String>) -> StdResult<String> {
+        self.querier.query_wasm_smart(
+            &self.addr,
+            &msg::QueryMsg::Counterparty {
+                client_id: client_id.into(),
+            },
+        )
+    }
 }

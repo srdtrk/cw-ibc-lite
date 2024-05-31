@@ -66,6 +66,13 @@ pub enum QueryMsg {
         /// The client id of the client to get the address of.
         client_id: String,
     },
+    /// Get the counterparty of a client. Returns an error if the client does not have a
+    /// counterparty or the client does not exist.
+    #[returns(String)]
+    Counterparty {
+        /// The client id of the client to get the counterparty of.
+        client_id: String,
+    },
 }
 
 /// Contains the query responses supported by the contract.

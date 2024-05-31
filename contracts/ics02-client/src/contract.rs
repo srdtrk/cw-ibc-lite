@@ -72,6 +72,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     match msg {
         QueryMsg::QueryClient { client_id, query } => query::query_client(deps, client_id, query),
         QueryMsg::ClientInfo { client_id } => query::client_info(deps, client_id),
+        QueryMsg::Counterparty { client_id } => query::counterparty(deps, client_id),
     }
 }
 
@@ -220,5 +221,11 @@ mod query {
         let client_contract = helpers::LightClientContract::new(client_address);
 
         Ok(client_contract.query(&deps.querier).smart_raw(query_msg)?)
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn counterparty(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
+        let counterparty_id = state::COUNTERPARTY.load(deps.storage, &client_id)?;
+        Ok(cosmwasm_std::to_json_binary(&counterparty_id)?)
     }
 }
