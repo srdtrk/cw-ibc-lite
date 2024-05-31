@@ -71,7 +71,7 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::QueryClient { .. } => todo!(),
-        QueryMsg::ClientAddress { client_id } => query::client_address(deps, client_id),
+        QueryMsg::ClientInfo { client_id } => query::client_info(deps, client_id),
     }
 }
 
@@ -175,15 +175,22 @@ mod execute {
 mod query {
     use super::{state, Binary, ContractError, Deps};
 
-    use cosmwasm_std::Addr;
+    use crate::types::msg::query_responses;
 
     /// Returns the address of the client encoded as a JSON binary.
     #[allow(clippy::needless_pass_by_value)]
-    pub fn client_address(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
-        state::CLIENTS
-            .load(deps.storage, &client_id)
-            .map(Addr::into_string)
-            .and_then(|s| cosmwasm_std::to_json_binary(&s))
-            .map_err(ContractError::Std)
+    pub fn client_info(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
+        let address = state::CLIENTS.load(deps.storage, &client_id)?;
+        let counterparty_id = state::COUNTERPARTY.may_load(deps.storage, &client_id)?;
+        let creator = state::CREATORS.load(deps.storage, &client_id)?;
+
+        Ok(cosmwasm_std::to_json_binary(
+            &query_responses::ClientInfo {
+                client_id,
+                address: address.into_string(),
+                counterparty_id,
+                creator: creator.into_string(),
+            },
+        )?)
     }
 }

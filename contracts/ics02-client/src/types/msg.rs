@@ -62,8 +62,8 @@ pub enum QueryMsg {
         query: cw_ibc_lite_types::clients::msg::QueryMsg,
     },
     /// Get the contract address of a client. Returns an error if the client does not exist.
-    #[returns(String)]
-    ClientAddress {
+    #[returns(query_responses::ClientInfo)]
+    ClientInfo {
         /// The client id of the client to get the address of.
         client_id: String,
     },
@@ -86,5 +86,19 @@ pub mod query_responses {
         CheckForMisbehaviour(
             cw_ibc_lite_types::clients::msg::query_responses::CheckForMisbehaviour,
         ),
+    }
+
+    /// The response to [`super::QueryMsg::ClientInfo`].
+    #[super::cw_serde]
+    pub struct ClientInfo {
+        /// The client identifier.
+        pub client_id: String,
+        /// The contract address of the client.
+        pub address: String,
+        /// The counterparty client identifier.
+        /// None if the counterparty is not provided.
+        pub counterparty_id: Option<String>,
+        /// The creator address of the client.
+        pub creator: String,
     }
 }

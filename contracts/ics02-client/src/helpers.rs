@@ -174,10 +174,13 @@ impl<'a> Ics02ClientContractQuerier<'a> {
     /// # Errors
     ///
     /// This function returns an error if the query fails
-    pub fn client_address(&self, client_id: impl Into<String>) -> StdResult<String> {
+    pub fn client_info(
+        &self,
+        client_id: impl Into<String>,
+    ) -> StdResult<msg::query_responses::ClientInfo> {
         self.querier.query_wasm_smart(
             &self.addr,
-            &msg::QueryMsg::ClientAddress {
+            &msg::QueryMsg::ClientInfo {
                 client_id: client_id.into(),
             },
         )
