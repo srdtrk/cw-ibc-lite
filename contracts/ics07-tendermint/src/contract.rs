@@ -77,7 +77,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::VerifyMembership(_) | QueryMsg::VerifyNonMembership(_) => {
             query::execute_query(deps, env, msg.try_into()?)
         }
-        QueryMsg::Ownership {} => query::ownership(deps),
     }
 }
 
@@ -154,10 +153,5 @@ mod query {
         let mut ctx = TendermintContext::new_mut(deps_mut, env)?;
 
         ctx.sudo(msg).map_err(ContractError::from)
-    }
-
-    pub fn ownership(deps: Deps) -> Result<Binary, ContractError> {
-        Ok(cw_ownable::get_ownership(deps.storage)
-            .and_then(|o| cosmwasm_std::to_json_binary(&o))?)
     }
 }

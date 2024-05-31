@@ -256,13 +256,4 @@ impl<'a> Ics07TendermintContractQuerier<'a> {
         self.querier
             .query_wasm_smart(&self.addr, &msg::QueryMsg::VerifyNonMembership(msg.into()))
     }
-
-    /// `ownership` sends a [`msg::QueryMsg::Ownership`] query to this contract.
-    ///
-    /// # Errors
-    /// This function returns an error if the query fails
-    pub fn ownership(&self) -> StdResult<cw_ownable::Ownership<String>> {
-        self.querier
-            .query_wasm_smart(&self.addr, &msg::QueryMsg::Ownership {})
-    }
 }
