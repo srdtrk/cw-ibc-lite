@@ -1,5 +1,6 @@
 //! This module defines the state storage of the Contract.
 
+use cosmwasm_std::Addr;
 use cw_ibc_lite_types::storage::PureItem;
 
 use cw_storage_plus::Map;
@@ -9,6 +10,11 @@ use ibc_core_host::types::path;
 /// The map for the next sequence to send.
 /// Maps (`port_id`, `channel_id`) to the next sequence to send.
 pub const NEXT_SEQUENCE_SEND: Map<(String, String), u64> = Map::new("next_sequence_send");
+
+/// The map from port IDs to their associated contract addresses.
+/// For now, the port ID is the same as the contract address with the
+/// [`super::keys::PORT_ID_PREFIX`] prefix.
+pub const IBC_APPS: Map<String, Addr> = Map::new("ibc_apps");
 
 /// A collection of methods to access the packet commitment state.
 pub mod packet_commitment_item {

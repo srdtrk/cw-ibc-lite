@@ -89,6 +89,7 @@ pub fn execute(
             proof_height,
             next_sequence_recv,
         ),
+        ExecuteMsg::RegisterIbcApp { .. } => todo!(),
     }
 }
 

@@ -9,7 +9,10 @@ use cw_ibc_lite_types::ibc::{Height, Packet};
 
 /// The message to instantiate the contract.
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    /// cw-ibc-lite-ics02-client router code id
+    ics02_client_code_id: u64,
+}
 
 /// The execute messages supported by the contract.
 #[cw_serde]
@@ -63,6 +66,16 @@ pub enum ExecuteMsg {
         proof_height: Height,
         /// The next sequence receive number.
         next_sequence_recv: u64,
+    },
+    /// Anyone can register an IBC app with this contract.
+    /// A custom port ID can only be provided if the caller is the admin of the contract.
+    RegisterIbcApp {
+        /// The port ID of the IBC app. Can only be provided by the admin of the contract.
+        /// If not provided, the contract address is used with the [`super::keys::PORT_ID_PREFIX`]
+        /// prefix.
+        port_id: Option<String>,
+        /// The contract address of the IBC app.
+        address: String,
     },
 }
 
