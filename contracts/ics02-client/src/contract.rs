@@ -52,9 +52,9 @@ pub fn execute(
             execute::execute_client(deps, env, info, client_id, message)
         }
         ExecuteMsg::MigrateClient {
-            client_id,
-            new_client_id,
-        } => execute::migrate_client(deps, env, info, client_id, new_client_id),
+            subject_client_id,
+            substitute_client_id,
+        } => execute::migrate_client(deps, env, info, subject_client_id, substitute_client_id),
         ExecuteMsg::ProvideCounterparty {
             client_id,
             counterparty_id,
@@ -140,13 +140,27 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn migrate_client(
-        _deps: DepsMut,
+        deps: DepsMut,
         _env: Env,
-        _info: MessageInfo,
-        _client_id: String,
-        _new_client_id: String,
+        info: MessageInfo,
+        subject_client_id: String,
+        substitute_client_id: String,
     ) -> Result<Response, ContractError> {
-        todo!()
+        cw_ownable::assert_owner(deps.storage, &info.sender)?;
+        if !state::CLIENTS.has(deps.storage, &subject_client_id) {
+            return Err(ContractError::not_found::<cosmwasm_std::Addr>(
+                subject_client_id.into_bytes(),
+            ));
+        }
+
+        let substitute_client_address = state::CLIENTS.load(deps.storage, &substitute_client_id)?;
+        state::CLIENTS.save(deps.storage, &subject_client_id, &substitute_client_address)?;
+
+        Ok(Response::new().add_event(events::migrate_client::success(
+            &subject_client_id,
+            &substitute_client_id,
+            substitute_client_address.as_str(),
+        )))
     }
 
     #[allow(clippy::needless_pass_by_value)]

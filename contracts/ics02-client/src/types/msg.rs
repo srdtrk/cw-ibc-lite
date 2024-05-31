@@ -35,10 +35,10 @@ pub enum ExecuteMsg {
     },
     /// Migrate the underlying client
     MigrateClient {
-        /// The client id of the client to migrate.
-        client_id: String,
-        /// The new client id to migrate to.
-        new_client_id: String,
+        /// Identifier of the client to migrate.
+        subject_client_id: String,
+        /// Identifier of the client with the new contract.
+        substitute_client_id: String,
     },
     /// Provide the counterparty for a client.
     ProvideCounterparty {

@@ -4,6 +4,8 @@
 pub const EVENT_TYPE_CREATE_CLIENT: &str = "create_client";
 /// `EVENT_TYPE_PROVIDE_COUNTERPARTY` is the event type for a provide counterparty event
 pub const EVENT_TYPE_PROVIDE_COUNTERPARTY: &str = "provide_counterparty";
+/// `EVENT_TYPE_MIGRATE_CLIENT` is the event type for a migrate client event
+pub const EVENT_TYPE_MIGRATE_CLIENT: &str = "migrate_client";
 
 /// `ATTRIBUTE_KEY_CLIENT_ID` is the attribute key for the client id
 pub const ATTRIBUTE_KEY_CLIENT_ID: &str = "client_id";
@@ -14,6 +16,13 @@ pub const ATTRIBUTE_KEY_COUNTERPARTY_ID: &str = "counterparty_id";
 pub const ATTRIBUTE_KEY_CREATOR: &str = "creator";
 /// `ATTRIBUTE_KEY_CONTRACT_ADDRESS` is the attribute key for the contract address
 pub const ATTRIBUTE_KEY_CONTRACT_ADDRESS: &str = "contract_address";
+/// `ATTRIBUTE_KEY_SUBJECT_CLIENT_ID` is the attribute key for the subject client id
+pub const ATTRIBUTE_KEY_SUBJECT_CLIENT_ID: &str = "subject_client_id";
+/// `ATTRIBUTE_KEY_SUBSTITUTE_CLIENT_ID` is the attribute key for the substitute client id
+pub const ATTRIBUTE_KEY_SUBSTITUTE_CLIENT_ID: &str = "substitute_client_id";
+/// `ATTRIBUTE_KEY_SUBSTITUTE_CLIENT_ADDRESS` is the attribute key for the substitute client's
+/// contract address
+pub const ATTRIBUTE_KEY_SUBSTITUTE_CLIENT_ADDRESS: &str = "substitute_client_address";
 
 /// Contains event messages emitted during [`super::super::msg::ExecuteMsg::CreateClient`] execution.
 pub mod create_client {
@@ -47,6 +56,32 @@ pub mod provide_counterparty {
         Event::new(super::EVENT_TYPE_PROVIDE_COUNTERPARTY).add_attributes(vec![
             Attribute::new(super::ATTRIBUTE_KEY_CLIENT_ID, client_id),
             Attribute::new(super::ATTRIBUTE_KEY_COUNTERPARTY_ID, counterparty_id),
+        ])
+    }
+}
+
+/// Contains event messages emitted during [`super::super::msg::ExecuteMsg::MigrateClient`]
+/// execution.
+pub mod migrate_client {
+    use cosmwasm_std::{Attribute, Event};
+
+    /// `migrate_client` is the event message for a migrate client event
+    #[must_use]
+    pub fn success(
+        subject_client_id: &str,
+        substitute_client_id: &str,
+        substitute_client_address: &str,
+    ) -> Event {
+        Event::new(super::EVENT_TYPE_MIGRATE_CLIENT).add_attributes(vec![
+            Attribute::new(super::ATTRIBUTE_KEY_SUBJECT_CLIENT_ID, subject_client_id),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SUBSTITUTE_CLIENT_ID,
+                substitute_client_id,
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SUBSTITUTE_CLIENT_ADDRESS,
+                substitute_client_address,
+            ),
         ])
     }
 }
