@@ -44,3 +44,4 @@ ibc-core-host = { version = "0.53.0", default-features = false }
 ibc-client-cw = "0.53.0"
 ibc-client-tendermint = { version = "0.53.0", default-features = false, features = ["std", "serde", "schema"] }
 cw-ibc-lite-types = { version = "0.1.0", path = "./packages/types/" }
+cw-ibc-lite-ics02-client = { version = "0.1.0", path = "./contracts/ics02-client/", default-features = false }

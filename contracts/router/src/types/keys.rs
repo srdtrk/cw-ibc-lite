@@ -10,3 +10,6 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// `PORT_ID_PREFIX` is the prefix of the port id
 pub const PORT_ID_PREFIX: &str = "wasm.";
+
+/// `ICS02_CLIENT_SALT` is the salt for the ICS02 client instantiation
+pub const ICS02_CLIENT_SALT: &str = "ics02_client";

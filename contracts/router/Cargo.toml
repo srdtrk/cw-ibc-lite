@@ -26,3 +26,4 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 ibc-core-host = { workspace = true }
 cw-ibc-lite-types = { workspace = true }
+cw-ibc-lite-ics02-client = { workspace = true }

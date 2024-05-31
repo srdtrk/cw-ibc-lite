@@ -328,6 +328,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-ibc-lite-ics02-client",
  "cw-ibc-lite-types",
  "cw-storage-plus",
  "cw2",

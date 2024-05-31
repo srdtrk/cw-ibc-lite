@@ -6,6 +6,8 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, StdResult};
 
+// TODO: create a proc macro for including ibc-lite callbacks in the ExecuteMsg enum
+
 /// All IBC applications built with `cw-ibc-lite` must handle these callback messages.
 #[cw_serde]
 pub enum IbcAppCallbackMsg {

@@ -11,7 +11,7 @@ use cw_ibc_lite_types::ibc::{Height, Packet};
 #[cw_serde]
 pub struct InstantiateMsg {
     /// cw-ibc-lite-ics02-client router code id
-    ics02_client_code_id: u64,
+    pub ics02_client_code_id: u64,
 }
 
 /// The execute messages supported by the contract.

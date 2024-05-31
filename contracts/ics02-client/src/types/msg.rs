@@ -7,10 +7,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 /// The message to instantiate the contract.
 /// Sender is assumed to be cw-ibc-lite-routee, and becomes the owner of the contract.
 #[cw_serde]
-pub struct InstantiateMsg {
-    /// cw-ibc-lite-ics02-client code id
-    ics02_client_code_id: u64,
-}
+pub struct InstantiateMsg {}
 
 /// The execute messages supported by the contract.
 #[cw_serde]

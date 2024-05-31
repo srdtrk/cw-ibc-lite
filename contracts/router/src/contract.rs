@@ -2,11 +2,14 @@
 
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
+use cw_ibc_lite_ics02_client as ics02_client;
+
 use cw_ibc_lite_types::error::ContractError;
 
 use crate::types::{
     keys,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state,
 };
 
 /// Instantiates a new contract.
@@ -17,12 +20,26 @@ use crate::types::{
 #[cosmwasm_std::entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     _info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
-    unimplemented!()
+
+    let ics02_code = ics02_client::helpers::Ics02ClientCode::new(msg.ics02_client_code_id);
+    let (ics02_instantiate, ics02_address) = ics02_code.instantiate2(
+        deps.api,
+        &deps.querier,
+        &env,
+        ics02_client::types::msg::InstantiateMsg {},
+        // TODO: ensure there is no DOS attack vector here
+        format!("{}.{}", keys::ICS02_CLIENT_SALT, env.contract.address),
+        None::<String>,
+        keys::ICS02_CLIENT_SALT,
+    )?;
+    state::ICS02_CLIENT_ADDRESS.save(deps.storage, &ics02_address)?;
+
+    Ok(Response::new().add_message(ics02_instantiate))
 }
 
 /// Handles the execution of the contract by routing the messages to the respective handlers.
@@ -108,9 +125,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 mod execute {
-    use crate::types::{events, state};
+    use crate::types::events;
 
-    use super::{keys, ContractError, DepsMut, Env, MessageInfo, Response};
+    use super::{keys, state, ContractError, DepsMut, Env, MessageInfo, Response};
 
     use cosmwasm_std::{Binary, IbcTimeout};
 
@@ -197,9 +214,7 @@ mod execute {
 }
 
 mod query {
-    use super::{Binary, ContractError, Deps, Env};
-
-    use crate::types::state;
+    use super::{state, Binary, ContractError, Deps, Env};
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn port_router(deps: Deps, _env: Env, port_id: String) -> Result<Binary, ContractError> {

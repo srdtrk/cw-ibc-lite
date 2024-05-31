@@ -3,7 +3,7 @@
 use cosmwasm_std::Addr;
 use cw_ibc_lite_types::storage::PureItem;
 
-use cw_storage_plus::Map;
+use cw_storage_plus::{Item, Map};
 
 use ibc_core_host::types::path;
 
@@ -15,6 +15,9 @@ pub const NEXT_SEQUENCE_SEND: Map<(String, String), u64> = Map::new("next_sequen
 /// For now, the port ID is the same as the contract address with the
 /// [`super::keys::PORT_ID_PREFIX`] prefix.
 pub const IBC_APPS: Map<&str, Addr> = Map::new("ibc_apps");
+
+/// The item for storing the ics02-client router contract address.
+pub const ICS02_CLIENT_ADDRESS: Item<Addr> = Item::new("ics02_client_address");
 
 /// A collection of methods to access the packet commitment state.
 pub mod packet_commitment_item {
