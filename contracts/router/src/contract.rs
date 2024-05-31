@@ -108,7 +108,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 mod execute {
-    use super::{ContractError, DepsMut, Env, MessageInfo, Response};
+    use crate::types::{events, state};
+
+    use super::{keys, ContractError, DepsMut, Env, MessageInfo, Response};
 
     use cosmwasm_std::{Binary, IbcTimeout};
 
@@ -169,13 +171,28 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn register_ibc_app(
-        _deps: DepsMut,
-        _env: Env,
-        _info: MessageInfo,
-        _port_id: Option<String>,
-        _contract_address: String,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        port_id: Option<String>,
+        contract_address: String,
     ) -> Result<Response, ContractError> {
-        todo!()
+        let contract_address = deps.api.addr_validate(&contract_address)?;
+        let port_id = if let Some(port_id) = port_id {
+            // NOTE: Only the admin can register an IBC app with a custom port ID.
+            state::admin::assert_admin(&env, &deps.querier, &info.sender)?;
+            port_id
+        } else {
+            format!("{}{}", keys::PORT_ID_PREFIX, contract_address)
+        };
+
+        state::IBC_APPS.save(deps.storage, &port_id, &contract_address)?;
+
+        Ok(Response::new().add_event(events::register_ibc_app::success(
+            &port_id,
+            contract_address.as_str(),
+            info.sender.as_str(),
+        )))
     }
 }
 
@@ -186,8 +203,8 @@ mod query {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn port_router(deps: Deps, _env: Env, port_id: String) -> Result<Binary, ContractError> {
-        Ok(state::IBC_APPS
-            .load(deps.storage, &port_id)
-            .and_then(|s| cosmwasm_std::to_json_binary(&s))?)
+        Ok(cosmwasm_std::to_json_binary(
+            &state::IBC_APPS.load(deps.storage, &port_id)?,
+        )?)
     }
 }
