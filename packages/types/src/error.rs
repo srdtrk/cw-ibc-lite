@@ -23,6 +23,9 @@ pub enum ContractError {
         source_type: String,
         target_type: String,
     },
+
+    #[error("counterparty already provided")]
+    CounterpartyAlreadyProvided,
 }
 
 impl ContractError {

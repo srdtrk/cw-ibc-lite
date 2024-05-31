@@ -2,6 +2,8 @@
 
 /// `EVENT_TYPE_CREATE_CLIENT` is the event type for a create client event
 pub const EVENT_TYPE_CREATE_CLIENT: &str = "create_client";
+/// `EVENT_TYPE_PROVIDE_COUNTERPARTY` is the event type for a provide counterparty event
+pub const EVENT_TYPE_PROVIDE_COUNTERPARTY: &str = "provide_counterparty";
 
 /// `ATTRIBUTE_KEY_CLIENT_ID` is the attribute key for the client id
 pub const ATTRIBUTE_KEY_CLIENT_ID: &str = "client_id";
@@ -30,6 +32,21 @@ pub mod create_client {
             Attribute::new(super::ATTRIBUTE_KEY_COUNTERPARTY_ID, counterparty_id),
             Attribute::new(super::ATTRIBUTE_KEY_CREATOR, creator),
             Attribute::new(super::ATTRIBUTE_KEY_CONTRACT_ADDRESS, contract_address),
+        ])
+    }
+}
+
+/// Contains event messages emitted during [`super::super::msg::ExecuteMsg::ProvideCounterparty`]
+/// execution.
+pub mod provide_counterparty {
+    use cosmwasm_std::{Attribute, Event};
+
+    /// `provide_counterparty` is the event message for a provide counterparty event
+    #[must_use]
+    pub fn success(client_id: &str, counterparty_id: &str) -> Event {
+        Event::new(super::EVENT_TYPE_PROVIDE_COUNTERPARTY).add_attributes(vec![
+            Attribute::new(super::ATTRIBUTE_KEY_CLIENT_ID, client_id),
+            Attribute::new(super::ATTRIBUTE_KEY_COUNTERPARTY_ID, counterparty_id),
         ])
     }
 }

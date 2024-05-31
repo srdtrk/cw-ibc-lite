@@ -19,6 +19,7 @@ pub const CREATORS: Map<&str, Addr> = Map::new("creators");
 /// Contains state storage helpers.
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
+    use cw_ibc_lite_types::error::ContractError;
 
     use crate::types::keys;
 
@@ -33,5 +34,22 @@ pub mod helpers {
         super::NEXT_CLIENT_NUMBER.save(storage, &(client_number + 1))?;
 
         Ok(format!("{}{}", keys::CLIENT_ID_PREFIX, client_number))
+    }
+
+    /// Asserts that the given creator is the creator of the client.
+    ///
+    /// # Errors
+    /// Returns an error if the creator cannot be loaded or if the creator is not the same as the
+    /// given creator.
+    pub fn assert_creator(
+        storage: &dyn Storage,
+        client_id: &str,
+        creator: &cosmwasm_std::Addr,
+    ) -> Result<(), ContractError> {
+        let stored_creator = super::CREATORS.load(storage, client_id)?;
+        if stored_creator != creator {
+            return Err(ContractError::Unauthorized);
+        }
+        Ok(())
     }
 }

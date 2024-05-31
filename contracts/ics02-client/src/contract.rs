@@ -125,13 +125,17 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value, clippy::module_name_repetitions)]
     pub fn execute_client(
-        _deps: DepsMut,
+        deps: DepsMut,
         _env: Env,
         _info: MessageInfo,
-        _client_id: String,
-        _message: cw_ibc_lite_types::clients::msg::ExecuteMsg,
+        client_id: String,
+        message: cw_ibc_lite_types::clients::msg::ExecuteMsg,
     ) -> Result<Response, ContractError> {
-        todo!()
+        let client_address = state::CLIENTS.load(deps.storage, &client_id)?;
+        let client_contract = helpers::LightClientContract::new(client_address);
+
+        let execute = client_contract.call(message)?;
+        Ok(Response::new().add_message(execute))
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -147,13 +151,24 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn provide_counterparty(
-        _deps: DepsMut,
+        deps: DepsMut,
         _env: Env,
-        _info: MessageInfo,
-        _client_id: String,
-        _counterparty_id: String,
+        info: MessageInfo,
+        client_id: String,
+        counterparty_id: String,
     ) -> Result<Response, ContractError> {
-        todo!()
+        state::helpers::assert_creator(deps.storage, &client_id, &info.sender)?;
+        if state::COUNTERPARTY.has(deps.storage, &client_id) {
+            return Err(ContractError::CounterpartyAlreadyProvided);
+        }
+        state::COUNTERPARTY.save(deps.storage, &client_id, &counterparty_id)?;
+
+        Ok(
+            Response::new().add_event(events::provide_counterparty::success(
+                &client_id,
+                &counterparty_id,
+            )),
+        )
     }
 }
 
