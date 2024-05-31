@@ -14,7 +14,7 @@ pub const NEXT_SEQUENCE_SEND: Map<(String, String), u64> = Map::new("next_sequen
 /// The map from port IDs to their associated contract addresses.
 /// For now, the port ID is the same as the contract address with the
 /// [`super::keys::PORT_ID_PREFIX`] prefix.
-pub const IBC_APPS: Map<String, Addr> = Map::new("ibc_apps");
+pub const IBC_APPS: Map<&str, Addr> = Map::new("ibc_apps");
 
 /// A collection of methods to access the packet commitment state.
 pub mod packet_commitment_item {
@@ -85,5 +85,34 @@ pub mod packet_receipt_item {
             sequence
         );
         PureItem::new(&key)
+    }
+}
+
+/// A collection of methods to access the admin of the contract.
+pub mod admin {
+    use cosmwasm_std::{Addr, Env, QuerierWrapper};
+    use cw_ibc_lite_types::error::ContractError;
+
+    /// Asserts that the given address is the admin of the contract.
+    ///
+    /// # Errors
+    /// Returns an error if the given address is not the admin of the contract or the contract
+    /// doesn't have an admin.
+    #[allow(clippy::module_name_repetitions)]
+    pub fn assert_admin(
+        env: &Env,
+        querier: &QuerierWrapper,
+        addr: &Addr,
+    ) -> Result<(), ContractError> {
+        let admin = querier
+            .query_wasm_contract_info(&env.contract.address)?
+            .admin
+            .ok_or(ContractError::Unauthorized)?;
+
+        if admin != addr.as_str() {
+            return Err(ContractError::Unauthorized);
+        }
+
+        Ok(())
     }
 }

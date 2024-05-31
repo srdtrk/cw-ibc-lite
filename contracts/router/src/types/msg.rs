@@ -80,6 +80,14 @@ pub enum ExecuteMsg {
 }
 
 /// The query messages supported by the contract.
+// TODO: Add pagination query support.
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    /// PortRouter queries the contract address of the IBC app registered with the given port ID.
+    #[returns(String)]
+    PortRouter {
+        /// The port ID of the router.
+        port_id: String,
+    },
+}

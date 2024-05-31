@@ -1,6 +1,6 @@
 //! This module handles the execution logic of the contract.
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
 use cw_ibc_lite_types::error::ContractError;
 
@@ -89,7 +89,9 @@ pub fn execute(
             proof_height,
             next_sequence_recv,
         ),
-        ExecuteMsg::RegisterIbcApp { .. } => todo!(),
+        ExecuteMsg::RegisterIbcApp { port_id, address } => {
+            execute::register_ibc_app(deps, env, info, port_id, address)
+        }
     }
 }
 
@@ -99,8 +101,10 @@ pub fn execute(
 /// Will return an error if the handler returns an error.
 #[allow(clippy::needless_pass_by_value)]
 #[cosmwasm_std::entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::PortRouter { port_id } => query::port_router(deps, env, port_id),
+    }
 }
 
 mod execute {
@@ -161,5 +165,29 @@ mod execute {
         _next_sequence_recv: u64,
     ) -> Result<Response, ContractError> {
         todo!()
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn register_ibc_app(
+        _deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
+        _port_id: Option<String>,
+        _contract_address: String,
+    ) -> Result<Response, ContractError> {
+        todo!()
+    }
+}
+
+mod query {
+    use super::{Binary, ContractError, Deps, Env};
+
+    use crate::types::state;
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn port_router(deps: Deps, _env: Env, port_id: String) -> Result<Binary, ContractError> {
+        Ok(state::IBC_APPS
+            .load(deps.storage, &port_id)
+            .and_then(|s| cosmwasm_std::to_json_binary(&s))?)
     }
 }
