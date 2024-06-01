@@ -131,20 +131,70 @@ mod execute {
 
     use cosmwasm_std::{Binary, IbcTimeout};
 
+    use cw_ibc_lite_ics02_client::helpers;
     use cw_ibc_lite_types::ibc::{Height, Packet};
 
     #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     pub fn send_packet(
-        _deps: DepsMut,
-        _env: Env,
+        deps: DepsMut,
+        env: Env,
         _info: MessageInfo,
-        _source_channel: String,
-        _source_port_id: String,
-        _dest_channel: String,
-        _dest_port_id: String,
-        _data: Binary,
-        _timeout: IbcTimeout,
+        source_channel: String,
+        source_port_id: String,
+        dest_channel: String,
+        dest_port_id: String,
+        data: Binary,
+        timeout: IbcTimeout,
     ) -> Result<Response, ContractError> {
+        let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
+        let ics02_contract = helpers::Ics02ClientContract::new(ics02_address);
+
+        // Ensure the counterparty is the destination channel.
+        let counterparty_id = ics02_contract
+            .query(&deps.querier)
+            .counterparty(source_channel.as_str())?;
+        if counterparty_id != dest_channel {
+            return Err(ContractError::invalid_counterparty(
+                counterparty_id,
+                dest_channel,
+            ));
+        }
+
+        // Ensure the timeout is valid.
+        // TODO: Not using the client's height for now unlike ibc-go. Make sure this is secure.
+        // TODO: Move this to utils.
+        if timeout.block().is_some() {
+            return Err(ContractError::InvalidTimeoutHeight);
+        }
+        timeout
+            .timestamp()
+            .ok_or(ContractError::EmptyTimestamp)
+            .and_then(|ts| {
+                if env.block.time > ts {
+                    return Err(ContractError::invalid_timeout_timestamp(
+                        env.block.time.seconds(),
+                        ts.seconds(),
+                    ));
+                }
+
+                Ok(())
+            })?;
+
+        // Construct the packet.
+        let sequence =
+            state::helpers::new_sequence_send(deps.storage, &source_port_id, &source_channel)?;
+        let packet = Packet {
+            sequence,
+            source_channel,
+            source_port: source_port_id,
+            destination_channel: dest_channel,
+            destination_port: dest_port_id,
+            data,
+            timeout,
+        };
+
+        state::helpers::commit_packet(deps.storage, &packet);
+
         todo!()
     }
 

@@ -13,3 +13,9 @@ pub const PORT_ID_PREFIX: &str = "wasm.";
 
 /// `ICS02_CLIENT_SALT` is the salt for the ICS02 client instantiation
 pub const ICS02_CLIENT_SALT: &str = "ics02_client";
+
+/// Contains the reply ids for various `SubMsg` replies
+pub mod reply {
+    /// `ON_SEND_PACKET` is the reply id for the `OnSendPacket` callback reply
+    pub const ON_SEND_PACKET: u64 = 1;
+}

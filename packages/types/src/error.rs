@@ -26,6 +26,16 @@ pub enum ContractError {
 
     #[error("counterparty already provided")]
     CounterpartyAlreadyProvided,
+    #[error("invalid counterparty: expected {expected}, actual {actual}")]
+    InvalidCounterparty { expected: String, actual: String },
+    #[error("this contract does not accept block height for timeout, use timestamp")]
+    InvalidTimeoutHeight,
+    #[error(
+        "invalid timeout timestamp: current {current}, timestamp {timestamp} (seconds since epoch)"
+    )]
+    InvalidTimeoutTimestamp { current: u64, timestamp: u64 },
+    #[error("empty timestamp")]
+    EmptyTimestamp,
 }
 
 impl ContractError {
@@ -45,6 +55,20 @@ impl ContractError {
             source_type: std::any::type_name::<S>().to_string(),
             target_type: std::any::type_name::<T>().to_string(),
         }
+    }
+
+    /// Returns a new [`ContractError::InvalidCounterparty`] with the given expected and actual
+    /// values.
+    #[must_use]
+    pub const fn invalid_counterparty(expected: String, actual: String) -> Self {
+        Self::InvalidCounterparty { expected, actual }
+    }
+
+    /// Returns a new [`ContractError::InvalidTimeoutTimestamp`] with the given current and
+    /// timestamp values.
+    #[must_use]
+    pub const fn invalid_timeout_timestamp(current: u64, timestamp: u64) -> Self {
+        Self::InvalidTimeoutTimestamp { current, timestamp }
     }
 }
 

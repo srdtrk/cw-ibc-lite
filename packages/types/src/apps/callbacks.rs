@@ -11,6 +11,22 @@ use cosmwasm_std::{Binary, StdResult};
 /// All IBC applications built with `cw-ibc-lite` must handle these callback messages.
 #[cw_serde]
 pub enum IbcAppCallbackMsg {
+    /// OnSendPacket is called when a packet send request is received by the `cw-ibc-lite` router.
+    /// The packet send is cancelled if the callback response is an error.
+    OnSendPacket {
+        /// The source port ID of the packet.
+        source_port_id: String,
+        /// The source client ID of the packet.
+        source_channel_id: String,
+        /// The sequence number of the packet.
+        sequence: u64,
+        /// The version string of the packet for the IBC application.
+        version: String,
+        /// The packet data.
+        data: Binary,
+        /// Sender address of the packet.
+        sender: String,
+    },
     /// Called when a packet is sent to this IBC application.
     /// This callback needs to be responded with [`response::AcknowledgementData`].
     OnRecvPacket {
@@ -20,7 +36,7 @@ pub enum IbcAppCallbackMsg {
         relayer: String,
     },
     /// Called when a packet to be acknowledged by this IBC application.
-    /// This callback need not be responded with a response.
+    /// This callback need not be responded with data.
     OnAcknowledgementPacket {
         /// The packet to acknowledge.
         packet: crate::ibc::Packet,
@@ -30,7 +46,7 @@ pub enum IbcAppCallbackMsg {
         relayer: String,
     },
     /// Called when a packet to be timed out by this IBC application.
-    /// This callback need not be responded with a response.
+    /// This callback need not be responded with data.
     OnTimeoutPacket {
         /// The packet to timeout.
         packet: crate::ibc::Packet,

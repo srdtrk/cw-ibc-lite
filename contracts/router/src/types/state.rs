@@ -9,7 +9,7 @@ use ibc_core_host::types::path;
 
 /// The map for the next sequence to send.
 /// Maps (`port_id`, `channel_id`) to the next sequence to send.
-pub const NEXT_SEQUENCE_SEND: Map<(String, String), u64> = Map::new("next_sequence_send");
+pub const NEXT_SEQUENCE_SEND: Map<(&str, &str), u64> = Map::new("next_sequence_send");
 
 /// The map from port IDs to their associated contract addresses.
 /// For now, the port ID is the same as the contract address with the
@@ -117,5 +117,38 @@ pub mod admin {
         }
 
         Ok(())
+    }
+}
+
+/// Contains state storage helpers.
+pub mod helpers {
+    use cosmwasm_std::{StdResult, Storage};
+    use cw_ibc_lite_types::ibc::Packet;
+
+    /// Generates a new sequence number for sending packets.
+    ///
+    /// # Errors
+    /// Returns an error if the sequence number cannot be loaded or saved.
+    pub fn new_sequence_send(
+        storage: &mut dyn Storage,
+        port_id: &str,
+        channel_id: &str,
+    ) -> StdResult<u64> {
+        let next_sequence = super::NEXT_SEQUENCE_SEND
+            .may_load(storage, (port_id, channel_id))?
+            .unwrap_or_default();
+        super::NEXT_SEQUENCE_SEND.save(storage, (port_id, channel_id), &(next_sequence + 1))?;
+        Ok(next_sequence)
+    }
+
+    /// Commits a packet to the provable packet commitment store.
+    pub fn commit_packet(storage: &mut dyn Storage, packet: &Packet) {
+        let item = super::packet_commitment_item::new(
+            &packet.source_port,
+            &packet.source_channel,
+            packet.sequence,
+        );
+
+        item.save(storage, &packet.to_commitment_bytes());
     }
 }

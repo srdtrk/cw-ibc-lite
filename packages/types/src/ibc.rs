@@ -41,3 +41,11 @@ pub struct Height {
     /// the height within the given revision
     pub revision_height: u64,
 }
+
+impl Packet {
+    /// `to_commitment_bytes` serializes the packet to commitment bytes as per [ibc-lite go implementation](https://github.com/cosmos/ibc-go/blob/2b40562bcd59ce820ddd7d6732940728487cf94e/modules/core/04-channel/types/packet.go#L38)
+    #[must_use]
+    pub fn to_commitment_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
