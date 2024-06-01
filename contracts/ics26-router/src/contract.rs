@@ -131,9 +131,12 @@ mod execute {
 
     use cosmwasm_std::{Binary, IbcTimeout};
 
-    use cw_ibc_lite_ics02_client::helpers;
+    use cw_ibc_lite_ics02_client::helpers as client_helpers;
     use cw_ibc_lite_shared::{
-        types::ibc::{Height, Packet},
+        types::{
+            apps,
+            ibc::{Height, Packet},
+        },
         utils,
     };
 
@@ -141,7 +144,7 @@ mod execute {
     pub fn send_packet(
         deps: DepsMut,
         env: Env,
-        _info: MessageInfo,
+        info: MessageInfo,
         source_channel: String,
         source_port_id: String,
         dest_channel: String,
@@ -150,7 +153,10 @@ mod execute {
         timeout: IbcTimeout,
     ) -> Result<Response, ContractError> {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
-        let ics02_contract = helpers::Ics02ClientContract::new(ics02_address);
+        let ics02_contract = client_helpers::Ics02ClientContract::new(ics02_address);
+
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, &source_port_id)?;
+        let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Ensure the counterparty is the destination channel.
         let counterparty_id = ics02_contract
@@ -179,9 +185,21 @@ mod execute {
             timeout,
         };
 
-        state::helpers::commit_packet(deps.storage, &packet);
+        // TODO: Ensure it is ok to commit packet and emit events before the callback.
+        state::helpers::commit_packet(deps.storage, &packet)?;
 
-        todo!()
+        let send_packet_event = events::send_packet::success(&packet);
+        let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnSendPacket {
+            packet,
+            version: keys::CONTRACT_VERSION.to_string(),
+            sender: info.sender.into(),
+        };
+        let send_packet_callback = ibc_app_contract.call(callback_msg)?;
+
+        // TODO: Ensure event emission is reverted if the callback fails.
+        Ok(Response::new()
+            .add_message(send_packet_callback)
+            .add_event(send_packet_event))
     }
 
     #[allow(clippy::needless_pass_by_value)]

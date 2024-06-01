@@ -14,16 +14,10 @@ pub enum IbcAppCallbackMsg {
     /// OnSendPacket is called when a packet send request is received by the `cw-ibc-lite` router.
     /// The packet send is cancelled if the callback response is an error.
     OnSendPacket {
-        /// The source port ID of the packet.
-        source_port_id: String,
-        /// The source client ID of the packet.
-        source_channel_id: String,
-        /// The sequence number of the packet.
-        sequence: u64,
+        /// The packet to be sent.
+        packet: crate::types::ibc::Packet,
         /// The version string of the packet for the IBC application.
         version: String,
-        /// The packet data.
-        data: Binary,
         /// Sender address of the packet.
         sender: String,
     },

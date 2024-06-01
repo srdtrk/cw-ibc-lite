@@ -36,6 +36,8 @@ pub enum ContractError {
     InvalidTimeoutTimestamp { current: u64, timestamp: u64 },
     #[error("empty timestamp")]
     EmptyTimestamp,
+    #[error("packet already commited: key: {:02x?}", key)]
+    PacketAlreadyCommited { key: Vec<u8> },
 }
 
 impl ContractError {
@@ -69,6 +71,12 @@ impl ContractError {
     #[must_use]
     pub const fn invalid_timeout_timestamp(current: u64, timestamp: u64) -> Self {
         Self::InvalidTimeoutTimestamp { current, timestamp }
+    }
+
+    /// Returns a new [`ContractError::PacketAlreadyCommited`] with the given key.
+    #[must_use]
+    pub const fn packet_already_commited(key: Vec<u8>) -> Self {
+        Self::PacketAlreadyCommited { key }
     }
 }
 

@@ -123,7 +123,7 @@ pub mod admin {
 /// Contains state storage helpers.
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
-    use cw_ibc_lite_shared::types::ibc::Packet;
+    use cw_ibc_lite_shared::types::{error::ContractError, ibc::Packet};
 
     /// Generates a new sequence number for sending packets.
     ///
@@ -142,13 +142,23 @@ pub mod helpers {
     }
 
     /// Commits a packet to the provable packet commitment store.
-    pub fn commit_packet(storage: &mut dyn Storage, packet: &Packet) {
+    ///
+    /// # Errors
+    /// Returns an error if the packet has already been committed.
+    pub fn commit_packet(storage: &mut dyn Storage, packet: &Packet) -> Result<(), ContractError> {
         let item = super::packet_commitment_item::new(
             &packet.source_port,
             &packet.source_channel,
             packet.sequence,
         );
 
+        if item.exists(storage) {
+            return Err(ContractError::packet_already_commited(
+                item.as_slice().to_vec(),
+            ));
+        }
+
         item.save(storage, &packet.to_commitment_bytes());
+        Ok(())
     }
 }
