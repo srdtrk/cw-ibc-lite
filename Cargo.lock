@@ -323,7 +323,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-ibc-lite-router"
+name = "cw-ibc-lite-ics26-router"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",

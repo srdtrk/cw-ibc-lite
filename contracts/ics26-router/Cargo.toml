@@ -1,5 +1,5 @@
 [package]
-name = "cw-ibc-lite-router"
+name = "cw-ibc-lite-ics26-router"
 description = "IBC Lite Router for CosmWasm"
 version = { workspace = true }
 authors = { workspace = true }

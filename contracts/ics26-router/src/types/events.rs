@@ -1,4 +1,4 @@
-//! `cw-ibc-lite-router` Event Keys
+//! `cw-ibc-lite-ics26-router` Event Keys
 
 /// `EVENT_TYPE_REGISTER_IBC_APP` is the event type for a register IBC app event
 pub const EVENT_TYPE_REGISTER_IBC_APP: &str = "register_ibc_app";
