@@ -161,4 +161,29 @@ pub mod helpers {
         item.save(storage, &packet.to_commitment_bytes());
         Ok(())
     }
+
+    /// Sets the packet receipt in the provable packet receipt store.
+    /// This is used to prevent replay.
+    ///
+    /// # Errors
+    /// Returns an error if the receipt has already been committed.
+    pub fn set_packet_receipt(
+        storage: &mut dyn Storage,
+        packet: &Packet,
+    ) -> Result<(), ContractError> {
+        let item = super::packet_receipt_item::new(
+            &packet.destination_port,
+            &packet.destination_channel,
+            packet.sequence,
+        );
+
+        if item.exists(storage) {
+            return Err(ContractError::packet_already_commited(
+                item.as_slice().to_vec(),
+            ));
+        }
+
+        item.save(storage, &[1]);
+        Ok(())
+    }
 }

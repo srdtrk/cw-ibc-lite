@@ -17,3 +17,4 @@ ibc-core-host = { workspace = true }
 ibc-client-cw = { workspace = true }
 cw-ownable = { workspace = true }
 sha2 = { workspace = true }
+ibc-proto = { workspace = true }

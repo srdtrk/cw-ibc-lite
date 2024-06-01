@@ -1,6 +1,6 @@
 //! This module handles the execution logic of the contract.
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 
 use cw_ibc_lite_ics02_client as ics02_client;
 
@@ -112,6 +112,19 @@ pub fn execute(
     }
 }
 
+/// Handles the replies to the submessages.
+///
+/// # Errors
+/// Will return an error if the handler returns an error.
+#[cosmwasm_std::entry_point]
+#[allow(clippy::needless_pass_by_value)]
+pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg.id {
+        keys::reply::ON_RECV_PACKET => todo!(),
+        _ => Err(ContractError::UnknownReplyId(msg.id)),
+    }
+}
+
 /// Handles the query messages by routing them to the respective handlers.
 ///
 /// # Errors
@@ -129,9 +142,9 @@ mod execute {
 
     use super::{keys, state, ContractError, DepsMut, Env, MessageInfo, Response};
 
-    use cosmwasm_std::{Binary, IbcTimeout};
+    use cosmwasm_std::{Binary, IbcTimeout, SubMsg};
 
-    use cw_ibc_lite_ics02_client as client;
+    use cw_ibc_lite_ics02_client as ics02_client;
     use cw_ibc_lite_shared::{
         types::{
             apps,
@@ -139,6 +152,8 @@ mod execute {
         },
         utils,
     };
+
+    use ibc_client_cw::types::VerifyMembershipMsgRaw;
 
     #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     pub fn send_packet(
@@ -153,7 +168,7 @@ mod execute {
         timeout: IbcTimeout,
     ) -> Result<Response, ContractError> {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
-        let ics02_contract = client::helpers::Ics02ClientContract::new(ics02_address);
+        let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
         let ibc_app_address = state::IBC_APPS.load(deps.storage, &source_port)?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
@@ -161,7 +176,8 @@ mod execute {
         // Ensure the counterparty is the destination channel.
         let counterparty_id = ics02_contract
             .query(&deps.querier)
-            .counterparty(&source_channel)?;
+            .counterparty(&source_channel)?
+            .client_id;
         if counterparty_id != dest_channel {
             return Err(ContractError::invalid_counterparty(
                 counterparty_id,
@@ -204,14 +220,63 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn recv_packet(
-        _deps: DepsMut,
+        deps: DepsMut,
         _env: Env,
-        _info: MessageInfo,
-        _packet: Packet,
-        _proof_commitment: Binary,
-        _proof_height: Height,
+        info: MessageInfo,
+        packet: Packet,
+        proof_commitment: Binary,
+        proof_height: Height,
     ) -> Result<Response, ContractError> {
-        todo!()
+        let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
+        let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
+
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, &packet.destination_port)?;
+        let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
+
+        // Verify the
+        let counterparty = ics02_contract
+            .query(&deps.querier)
+            .counterparty(&packet.destination_channel)?;
+        if counterparty.client_id != packet.source_channel {
+            return Err(ContractError::invalid_counterparty(
+                counterparty.client_id,
+                packet.source_channel,
+            ));
+        }
+
+        // NOTE: Verify the packet commitment.
+        let counterparty_commitment_path = state::packet_commitment_item::new(
+            &packet.source_port,
+            &packet.source_channel,
+            packet.sequence,
+        )
+        .try_into()?;
+        let verify_membership_msg = VerifyMembershipMsgRaw {
+            proof: proof_commitment.into(),
+            path: counterparty_commitment_path,
+            value: packet.to_commitment_bytes(),
+            height: proof_height.into(),
+            delay_time_period: 0,
+            delay_block_period: 0,
+        };
+        let _ = ics02_contract
+            .query(&deps.querier)
+            .client_querier(&packet.destination_channel)?
+            .verify_membership(verify_membership_msg)?;
+
+        state::helpers::set_packet_receipt(deps.storage, &packet)?;
+
+        // NOTE: We must retreive a reply from the IBC app to set the acknowledgement.
+        let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnRecvPacket {
+            packet,
+            relayer: info.sender.into(),
+        };
+        let recv_packet_callback = SubMsg::reply_on_success(
+            ibc_app_contract.call(callback_msg)?,
+            keys::reply::ON_RECV_PACKET,
+        );
+
+        Ok(Response::new().add_submessage(recv_packet_callback))
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -251,6 +316,7 @@ mod execute {
         let contract_address = deps.api.addr_validate(&contract_address)?;
         let port_id = if let Some(port_id) = port_id {
             // NOTE: Only the admin can register an IBC app with a custom port ID.
+            // TODO: Add restrictions to the custom port ID. Such as not using `/`.
             state::admin::assert_admin(&env, &deps.querier, &info.sender)?;
             port_id
         } else {

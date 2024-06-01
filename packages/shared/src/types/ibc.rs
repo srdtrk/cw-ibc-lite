@@ -43,6 +43,13 @@ pub struct Height {
     pub revision_height: u64,
 }
 
+// /// `MerklePath` is the path used to verify commitment proofs, which can be an
+// /// arbitrary structured object (defined by a commitment type).
+// /// `MerklePath` is represented from root-to-leaf
+// pub struct MerklePath {
+//     pub key_path: Vec<String>,
+// }
+
 impl Packet {
     /// `to_commitment_bytes` serializes the packet to commitment bytes as per [ibc-lite go implementation](https://github.com/cosmos/ibc-go/blob/2b40562bcd59ce820ddd7d6732940728487cf94e/modules/core/04-channel/types/packet.go#L38)
     ///
@@ -66,5 +73,14 @@ impl Packet {
         buf.extend_from_slice(self.destination_channel.as_bytes());
 
         sha2::Sha256::digest(&buf).to_vec()
+    }
+}
+
+impl From<Height> for ibc_proto::ibc::core::client::v1::Height {
+    fn from(height: Height) -> Self {
+        Self {
+            revision_number: height.revision_number,
+            revision_height: height.revision_height,
+        }
     }
 }

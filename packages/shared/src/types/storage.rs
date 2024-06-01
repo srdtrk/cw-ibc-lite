@@ -1,6 +1,7 @@
 //! This module defines the `CosmWasm` storage helper types.
 
 use cosmwasm_std::{Addr, CustomQuery, QuerierWrapper, StdResult, Storage};
+use ibc_client_cw::types::MerklePath;
 
 use super::error::ContractError;
 
@@ -56,7 +57,7 @@ impl PureItem {
     }
 
     /// If you import [`PureItem`] from the remote contract, this will let you read the data
-    /// from a remote contract using [`WasmQuery::Raw`]. Returns `Ok(None)` if no data is set.
+    /// from a remote contract using [`cosmwasm_std::WasmQuery::Raw`]. Returns `Ok(None)` if no data is set.
     ///
     /// # Errors
     /// It only returns error on some runtime issue, not on any data cases.
@@ -66,6 +67,47 @@ impl PureItem {
         remote_contract: Addr,
     ) -> StdResult<Option<Vec<u8>>> {
         querier.query_wasm_raw(remote_contract, self.as_slice())
+    }
+
+    /// This will convert the [`PureItem`] into a [`MerklePath`].
+    /// This is useful when you want to use the key for remote proofs.
+    ///
+    /// # Errors
+    /// It returns an error if the key is not valid UTF-8.
+    pub fn into_merkle_path_with_prefix(
+        self,
+        merkle_prefix: Option<MerklePath>,
+    ) -> Result<MerklePath, ContractError> {
+        if let Some(mut prefix) = merkle_prefix {
+            let last_mut = prefix.key_path.last_mut();
+            if let Some(last) = last_mut {
+                let key = String::from_utf8(self.storage_key)?;
+                last.push_str(&key);
+                Ok(prefix)
+            } else {
+                self.try_into()
+            }
+        } else {
+            self.try_into()
+        }
+    }
+}
+
+impl TryFrom<PureItem> for MerklePath {
+    type Error = ContractError;
+
+    fn try_from(item: PureItem) -> Result<Self, Self::Error> {
+        Ok(Self {
+            key_path: vec![item.try_into()?],
+        })
+    }
+}
+
+impl TryFrom<PureItem> for String {
+    type Error = ContractError;
+
+    fn try_from(item: PureItem) -> Result<Self, Self::Error> {
+        Ok(Self::from_utf8(item.storage_key)?)
     }
 }
 

@@ -16,6 +16,6 @@ pub const ICS02_CLIENT_SALT: &str = "ics02_client";
 
 /// Contains the reply ids for various `SubMsg` replies
 pub mod reply {
-    /// `ON_SEND_PACKET` is the reply id for the `OnSendPacket` callback reply
-    pub const ON_SEND_PACKET: u64 = 1;
+    /// `ON_RECV_PACKET` is the reply id for the `on_recv_packet` reply
+    pub const ON_RECV_PACKET: u64 = 1;
 }

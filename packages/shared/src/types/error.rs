@@ -12,6 +12,10 @@ pub enum ContractError {
     Std(#[from] StdError),
     #[error("{0}")]
     OwnershipError(#[from] cw_ownable::OwnershipError),
+    #[error("{0}")]
+    FromUTF8Error(#[from] std::string::FromUtf8Error),
+    #[error("{0}")]
+    UTF8Error(#[from] std::str::Utf8Error),
 
     #[error("unauthorized")]
     Unauthorized,
@@ -23,6 +27,8 @@ pub enum ContractError {
         source_type: String,
         target_type: String,
     },
+    #[error("unknown reply id: {0}")]
+    UnknownReplyId(u64),
 
     #[error("counterparty already provided")]
     CounterpartyAlreadyProvided,
