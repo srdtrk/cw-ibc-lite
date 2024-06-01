@@ -2,6 +2,7 @@
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, IbcTimeout};
+use sha2::Digest;
 
 /// Packet defines a type that carries data across different chains through IBC
 #[cw_serde]
@@ -44,8 +45,26 @@ pub struct Height {
 
 impl Packet {
     /// `to_commitment_bytes` serializes the packet to commitment bytes as per [ibc-lite go implementation](https://github.com/cosmos/ibc-go/blob/2b40562bcd59ce820ddd7d6732940728487cf94e/modules/core/04-channel/types/packet.go#L38)
+    ///
+    /// # Panics
+    /// Panics if the timeout timestamp is not set.
     #[must_use]
     pub fn to_commitment_bytes(&self) -> Vec<u8> {
-        todo!()
+        let mut buf: Vec<u8> = vec![];
+        // timeout timestep should be validated before calling this function
+        let timeout_nanoseconds = self.timeout.timestamp().unwrap().nanos();
+        // TODO: make sure that revision_number and revision_height can be ignored
+        let revision_number = 0_u64;
+        let revision_height = 0_u64;
+        let data_hash = sha2::Sha256::digest(self.data.as_slice());
+
+        buf.extend_from_slice(&timeout_nanoseconds.to_be_bytes());
+        buf.extend_from_slice(&revision_number.to_be_bytes());
+        buf.extend_from_slice(&revision_height.to_be_bytes());
+        buf.extend_from_slice(&data_hash);
+        buf.extend_from_slice(self.destination_port.as_bytes());
+        buf.extend_from_slice(self.destination_channel.as_bytes());
+
+        sha2::Sha256::digest(&buf).to_vec()
     }
 }

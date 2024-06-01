@@ -349,6 +349,7 @@ dependencies = [
  "ibc-core-host",
  "schemars",
  "serde",
+ "sha2 0.10.8",
  "thiserror",
 ]
 
