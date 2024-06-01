@@ -46,8 +46,8 @@ pub fn execute(
         ExecuteMsg::CreateClient {
             code_id,
             instantiate_msg,
-            counterparty_id,
-        } => execute::create_client(deps, env, info, code_id, instantiate_msg, counterparty_id),
+            counterparty_info,
+        } => execute::create_client(deps, env, info, code_id, instantiate_msg, counterparty_info),
         ExecuteMsg::ExecuteClient { client_id, message } => {
             execute::execute_client(deps, env, info, client_id, message)
         }
@@ -57,8 +57,8 @@ pub fn execute(
         } => execute::migrate_client(deps, env, info, subject_client_id, substitute_client_id),
         ExecuteMsg::ProvideCounterparty {
             client_id,
-            counterparty_id,
-        } => execute::provide_counterparty(deps, env, info, client_id, counterparty_id),
+            counterparty_info,
+        } => execute::provide_counterparty(deps, env, info, client_id, counterparty_info),
     }
 }
 
@@ -90,13 +90,13 @@ mod execute {
         info: MessageInfo,
         code_id: u64,
         instantiate_msg: cw_ibc_lite_shared::types::clients::msg::InstantiateMsg,
-        counterparty_id: Option<String>,
+        counterparty_info: Option<state::CounterpartyInfo>,
     ) -> Result<Response, ContractError> {
         let client_id = state::helpers::new_client_id(deps.storage)?;
 
         state::CREATORS.save(deps.storage, &client_id, &info.sender)?;
-        if let Some(counterparty_id) = &counterparty_id {
-            state::COUNTERPARTY.save(deps.storage, &client_id, counterparty_id)?;
+        if let Some(counterparty_info) = &counterparty_info {
+            state::COUNTERPARTY.save(deps.storage, &client_id, counterparty_info)?;
         }
 
         // Instantiate the light client.
@@ -118,7 +118,7 @@ mod execute {
             .add_message(instantiate2)
             .add_event(events::create_client::success(
                 &client_id,
-                &counterparty_id.unwrap_or_default(),
+                counterparty_info,
                 info.sender.as_str(),
                 address.as_str(),
             )))
@@ -170,18 +170,18 @@ mod execute {
         _env: Env,
         info: MessageInfo,
         client_id: String,
-        counterparty_id: String,
+        counterparty_info: state::CounterpartyInfo,
     ) -> Result<Response, ContractError> {
         state::helpers::assert_creator(deps.storage, &client_id, &info.sender)?;
         if state::COUNTERPARTY.has(deps.storage, &client_id) {
             return Err(ContractError::CounterpartyAlreadyProvided);
         }
-        state::COUNTERPARTY.save(deps.storage, &client_id, &counterparty_id)?;
+        state::COUNTERPARTY.save(deps.storage, &client_id, &counterparty_info)?;
 
         Ok(
             Response::new().add_event(events::provide_counterparty::success(
                 &client_id,
-                &counterparty_id,
+                counterparty_info,
             )),
         )
     }
@@ -198,14 +198,14 @@ mod query {
     #[allow(clippy::needless_pass_by_value)]
     pub fn client_info(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
         let address = state::CLIENTS.load(deps.storage, &client_id)?;
-        let counterparty_id = state::COUNTERPARTY.may_load(deps.storage, &client_id)?;
+        let counterparty_info = state::COUNTERPARTY.may_load(deps.storage, &client_id)?;
         let creator = state::CREATORS.load(deps.storage, &client_id)?;
 
         Ok(cosmwasm_std::to_json_binary(
             &query_responses::ClientInfo {
                 client_id,
                 address: address.into_string(),
-                counterparty_id,
+                counterparty_info,
                 creator: creator.into_string(),
             },
         )?)
@@ -225,7 +225,8 @@ mod query {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn counterparty(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
-        let counterparty_id = state::COUNTERPARTY.load(deps.storage, &client_id)?;
-        Ok(cosmwasm_std::to_json_binary(&counterparty_id)?)
+        let counterparty_info: state::CounterpartyInfo =
+            state::COUNTERPARTY.load(deps.storage, &client_id)?;
+        Ok(cosmwasm_std::to_json_binary(&counterparty_info)?)
     }
 }

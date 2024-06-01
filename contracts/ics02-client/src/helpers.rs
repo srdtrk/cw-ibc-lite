@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdResult, WasmMsg,
 };
 
-use crate::types::msg;
+use crate::types::{msg, state::CounterpartyInfo};
 
 /// `Ics02ClientContract` is a wrapper around Addr that provides helpers
 /// for working with this contract.
@@ -228,7 +228,7 @@ impl<'a> Ics02ClientContractQuerier<'a> {
     ///
     /// # Errors
     /// This function returns an error if the query fails
-    pub fn counterparty(&self, client_id: impl Into<String>) -> StdResult<String> {
+    pub fn counterparty(&self, client_id: impl Into<String>) -> StdResult<CounterpartyInfo> {
         self.querier.query_wasm_smart(
             &self.addr,
             &msg::QueryMsg::Counterparty {

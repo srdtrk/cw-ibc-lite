@@ -18,10 +18,10 @@ pub enum ExecuteMsg {
         code_id: u64,
         /// Instantiate message for the light client contract.
         instantiate_msg: cw_ibc_lite_shared::types::clients::msg::InstantiateMsg,
-        /// The optional counterparty id. If provided, the client will be provided with the counterparty.
+        /// The optional counterparty info. If provided, the client will be provided with the counterparty.
         /// If not provided, the counterparty must be provided later using the `ProvideCounterparty` message.
         #[serde(skip_serializing_if = "Option::is_none")]
-        counterparty_id: Option<String>,
+        counterparty_info: Option<super::state::CounterpartyInfo>,
     },
     /// Execute a message on a client.
     ExecuteClient {
@@ -41,8 +41,8 @@ pub enum ExecuteMsg {
     ProvideCounterparty {
         /// The client id of the client to provide the counterparty for.
         client_id: String,
-        /// The counterparty client id.
-        counterparty_id: String,
+        /// Counterparty client information.
+        counterparty_info: super::state::CounterpartyInfo,
     },
 }
 
@@ -68,7 +68,7 @@ pub enum QueryMsg {
     },
     /// Get the counterparty of a client. Returns an error if the client does not have a
     /// counterparty or the client does not exist.
-    #[returns(String)]
+    #[returns(super::state::CounterpartyInfo)]
     Counterparty {
         /// The client id of the client to get the counterparty of.
         client_id: String,
@@ -105,9 +105,9 @@ pub mod query_responses {
         pub client_id: String,
         /// The contract address of the client.
         pub address: String,
-        /// The counterparty client identifier.
+        /// The counterparty client info.
         /// None if the counterparty is not provided.
-        pub counterparty_id: Option<String>,
+        pub counterparty_info: Option<super::super::state::CounterpartyInfo>,
         /// The creator address of the client.
         pub creator: String,
     }
