@@ -293,7 +293,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-ibc-lite-types",
+ "cw-ibc-lite-shared",
  "cw-ownable",
  "cw-storage-plus",
  "cw2",
@@ -310,7 +310,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-ibc-lite-types",
+ "cw-ibc-lite-shared",
  "cw-ownable",
  "cw-storage-plus",
  "cw2",
@@ -329,7 +329,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-ibc-lite-ics02-client",
- "cw-ibc-lite-types",
+ "cw-ibc-lite-shared",
  "cw-storage-plus",
  "cw2",
  "ibc-core-host",
@@ -339,7 +339,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-ibc-lite-types"
+name = "cw-ibc-lite-shared"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",

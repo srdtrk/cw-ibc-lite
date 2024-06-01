@@ -2,7 +2,7 @@
 
 use cosmwasm_std::{Addr, CustomQuery, QuerierWrapper, StdResult, Storage};
 
-use crate::error::ContractError;
+use super::error::ContractError;
 
 /// `PureItem` is used to store [`Vec<u8>`] values.
 /// This is useful when you want to store a value similar to a [`cw_storage_plus::Item`]

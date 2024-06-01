@@ -1,6 +1,6 @@
 [package]
-name = "cw-ibc-lite-types"
-description = "Shared types for IBC Lite in CosmWasm"
+name = "cw-ibc-lite-shared"
+description = "Shared package for IBC Lite in CosmWasm"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }

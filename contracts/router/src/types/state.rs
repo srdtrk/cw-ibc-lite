@@ -1,7 +1,7 @@
 //! This module defines the state storage of the Contract.
 
 use cosmwasm_std::Addr;
-use cw_ibc_lite_types::storage::PureItem;
+use cw_ibc_lite_shared::types::storage::PureItem;
 
 use cw_storage_plus::{Item, Map};
 
@@ -94,7 +94,7 @@ pub mod packet_receipt_item {
 /// A collection of methods to access the admin of the contract.
 pub mod admin {
     use cosmwasm_std::{Addr, Env, QuerierWrapper};
-    use cw_ibc_lite_types::error::ContractError;
+    use cw_ibc_lite_shared::types::error::ContractError;
 
     /// Asserts that the given address is the admin of the contract.
     ///
@@ -123,7 +123,7 @@ pub mod admin {
 /// Contains state storage helpers.
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
-    use cw_ibc_lite_types::ibc::Packet;
+    use cw_ibc_lite_shared::types::ibc::Packet;
 
     /// Generates a new sequence number for sending packets.
     ///

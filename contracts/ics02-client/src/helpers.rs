@@ -1,7 +1,7 @@
 //! This file contains helper functions for working with this contract from
 //! external contracts.
 
-use cw_ibc_lite_types::clients::helpers::LightClientContractQuerier;
+use cw_ibc_lite_shared::types::clients::helpers::LightClientContractQuerier;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -212,7 +212,7 @@ impl<'a> Ics02ClientContractQuerier<'a> {
     pub fn query_client(
         &self,
         client_id: impl Into<String>,
-        query: impl Into<cw_ibc_lite_types::clients::msg::QueryMsg>,
+        query: impl Into<cw_ibc_lite_shared::types::clients::msg::QueryMsg>,
     ) -> StdResult<msg::query_responses::QueryClient> {
         self.querier.query_wasm_smart(
             &self.addr,

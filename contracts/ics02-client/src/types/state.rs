@@ -19,7 +19,7 @@ pub const CREATORS: Map<&str, Addr> = Map::new("creators");
 /// Contains state storage helpers.
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
-    use cw_ibc_lite_types::error::ContractError;
+    use cw_ibc_lite_shared::types::error::ContractError;
 
     use crate::types::keys;
 

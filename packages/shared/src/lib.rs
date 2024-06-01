@@ -2,8 +2,4 @@
 #![deny(missing_docs)]
 #![deny(clippy::nursery, clippy::pedantic, warnings)]
 
-pub mod apps;
-pub mod clients;
-pub mod error;
-pub mod ibc;
-pub mod storage;
+pub mod types;

@@ -31,7 +31,7 @@ pub enum IbcAppCallbackMsg {
     /// This callback needs to be responded with [`response::AcknowledgementData`].
     OnRecvPacket {
         /// The packet that was received.
-        packet: crate::ibc::Packet,
+        packet: crate::types::ibc::Packet,
         /// The relayer address that submitted the packet.
         relayer: String,
     },
@@ -39,7 +39,7 @@ pub enum IbcAppCallbackMsg {
     /// This callback need not be responded with data.
     OnAcknowledgementPacket {
         /// The packet to acknowledge.
-        packet: crate::ibc::Packet,
+        packet: crate::types::ibc::Packet,
         /// The acknowledgement data.
         acknowledgement: Binary,
         /// The relayer address that submitted the acknowledgement.
@@ -49,7 +49,7 @@ pub enum IbcAppCallbackMsg {
     /// This callback need not be responded with data.
     OnTimeoutPacket {
         /// The packet to timeout.
-        packet: crate::ibc::Packet,
+        packet: crate::types::ibc::Packet,
         /// The relayer address that submitted the timeout.
         relayer: String,
     },

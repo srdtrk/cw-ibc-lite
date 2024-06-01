@@ -17,7 +17,7 @@ pub enum ExecuteMsg {
         /// Code id of the light client contract code.
         code_id: u64,
         /// Instantiate message for the light client contract.
-        instantiate_msg: cw_ibc_lite_types::clients::msg::InstantiateMsg,
+        instantiate_msg: cw_ibc_lite_shared::types::clients::msg::InstantiateMsg,
         /// The optional counterparty id. If provided, the client will be provided with the counterparty.
         /// If not provided, the counterparty must be provided later using the `ProvideCounterparty` message.
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -28,7 +28,7 @@ pub enum ExecuteMsg {
         /// The client id of the client to execute the message on.
         client_id: String,
         /// The message to execute on the client.
-        message: cw_ibc_lite_types::clients::msg::ExecuteMsg,
+        message: cw_ibc_lite_shared::types::clients::msg::ExecuteMsg,
     },
     /// Migrate the underlying client
     MigrateClient {
@@ -58,7 +58,7 @@ pub enum QueryMsg {
         /// The client id of the client to execute the query on.
         client_id: String,
         /// The query to execute on the client.
-        query: cw_ibc_lite_types::clients::msg::QueryMsg,
+        query: cw_ibc_lite_shared::types::clients::msg::QueryMsg,
     },
     /// Get the contract address of a client. Returns an error if the client does not exist.
     #[returns(query_responses::ClientInfo)]
@@ -80,17 +80,21 @@ pub mod query_responses {
     /// The response to [`super::QueryMsg::QueryClient`].
     #[super::cw_serde]
     pub enum QueryClient {
-        /// The response to [`cw_ibc_lite_types::clients::QueryMsg::Status`].
-        Status(cw_ibc_lite_types::clients::msg::query_responses::Status),
-        /// The response to [`cw_ibc_lite_types::clients::QueryMsg::ExportMetadata`].
-        ExportMetadata(cw_ibc_lite_types::clients::msg::query_responses::ExportMetadata),
-        /// The response to [`cw_ibc_lite_types::clients::QueryMsg::TimestampAtHeight`].
-        TimestampAtHeight(cw_ibc_lite_types::clients::msg::query_responses::TimestampAtHeight),
-        /// The response to [`cw_ibc_lite_types::clients::QueryMsg::VerifyClientMessage`].
-        VerifyClientMessage(cw_ibc_lite_types::clients::msg::query_responses::VerifyClientMessage),
-        /// The response to [`cw_ibc_lite_types::clients::QueryMsg::CheckForMisbehaviour`].
+        /// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::Status`].
+        Status(cw_ibc_lite_shared::types::clients::msg::query_responses::Status),
+        /// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::ExportMetadata`].
+        ExportMetadata(cw_ibc_lite_shared::types::clients::msg::query_responses::ExportMetadata),
+        /// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::TimestampAtHeight`].
+        TimestampAtHeight(
+            cw_ibc_lite_shared::types::clients::msg::query_responses::TimestampAtHeight,
+        ),
+        /// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::VerifyClientMessage`].
+        VerifyClientMessage(
+            cw_ibc_lite_shared::types::clients::msg::query_responses::VerifyClientMessage,
+        ),
+        /// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::CheckForMisbehaviour`].
         CheckForMisbehaviour(
-            cw_ibc_lite_types::clients::msg::query_responses::CheckForMisbehaviour,
+            cw_ibc_lite_shared::types::clients::msg::query_responses::CheckForMisbehaviour,
         ),
     }
 

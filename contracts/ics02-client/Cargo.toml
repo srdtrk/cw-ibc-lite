@@ -27,4 +27,4 @@ thiserror = { workspace = true }
 cw-ownable = { workspace = true, optional = true }
 ibc-core-host = { workspace = true }
 ibc-client-cw = { workspace = true }
-cw-ibc-lite-types = { workspace = true }
+cw-ibc-lite-shared = { workspace = true }

@@ -2,7 +2,7 @@
 
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
-use cw_ibc_lite_types::error::ContractError;
+use cw_ibc_lite_shared::types::error::ContractError;
 
 use crate::types::{
     keys,
@@ -81,7 +81,7 @@ mod execute {
 
     use crate::types::events;
 
-    use cw_ibc_lite_types::clients::helpers;
+    use cw_ibc_lite_shared::types::clients::helpers;
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn create_client(
@@ -89,7 +89,7 @@ mod execute {
         env: Env,
         info: MessageInfo,
         code_id: u64,
-        instantiate_msg: cw_ibc_lite_types::clients::msg::InstantiateMsg,
+        instantiate_msg: cw_ibc_lite_shared::types::clients::msg::InstantiateMsg,
         counterparty_id: Option<String>,
     ) -> Result<Response, ContractError> {
         let client_id = state::helpers::new_client_id(deps.storage)?;
@@ -130,7 +130,7 @@ mod execute {
         _env: Env,
         _info: MessageInfo,
         client_id: String,
-        message: cw_ibc_lite_types::clients::msg::ExecuteMsg,
+        message: cw_ibc_lite_shared::types::clients::msg::ExecuteMsg,
     ) -> Result<Response, ContractError> {
         let client_address = state::CLIENTS.load(deps.storage, &client_id)?;
         let client_contract = helpers::LightClientContract::new(client_address);
@@ -190,7 +190,7 @@ mod execute {
 mod query {
     use super::{state, Binary, ContractError, Deps};
 
-    use cw_ibc_lite_types::clients::helpers;
+    use cw_ibc_lite_shared::types::clients::helpers;
 
     use crate::types::msg::query_responses;
 
@@ -215,7 +215,7 @@ mod query {
     pub fn query_client(
         deps: Deps,
         client_id: String,
-        query_msg: cw_ibc_lite_types::clients::msg::QueryMsg,
+        query_msg: cw_ibc_lite_shared::types::clients::msg::QueryMsg,
     ) -> Result<Binary, ContractError> {
         let client_address = state::CLIENTS.load(deps.storage, &client_id)?;
         let client_contract = helpers::LightClientContract::new(client_address);

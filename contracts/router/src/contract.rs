@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
 use cw_ibc_lite_ics02_client as ics02_client;
 
-use cw_ibc_lite_types::error::ContractError;
+use cw_ibc_lite_shared::types::error::ContractError;
 
 use crate::types::{
     keys,
@@ -132,7 +132,7 @@ mod execute {
     use cosmwasm_std::{Binary, IbcTimeout};
 
     use cw_ibc_lite_ics02_client::helpers;
-    use cw_ibc_lite_types::ibc::{Height, Packet};
+    use cw_ibc_lite_shared::types::ibc::{Height, Packet};
 
     #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     pub fn send_packet(

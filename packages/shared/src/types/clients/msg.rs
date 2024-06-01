@@ -8,7 +8,7 @@ use ibc_client_cw::types::{
     VerifyMembershipMsgRaw, VerifyNonMembershipMsgRaw, VerifyUpgradeAndUpdateStateMsgRaw,
 };
 
-use crate::error::ContractError;
+use super::super::error::ContractError;
 
 /// Instantiate message for all light client contracts in ibc-lite
 #[cw_serde]

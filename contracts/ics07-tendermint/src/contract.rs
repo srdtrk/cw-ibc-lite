@@ -1,7 +1,7 @@
 //! This module handles the execution logic of the contract.
 
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw_ibc_lite_types::error::ContractError;
+use cw_ibc_lite_shared::types::error::ContractError;
 
 use crate::types::{
     keys,
@@ -81,7 +81,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 mod query {
-    use cw_ibc_lite_types::{clients::msg::query_responses, storage::mock_mut::MockMutStorage};
+    use cw_ibc_lite_shared::types::{
+        clients::msg::query_responses, storage::mock_mut::MockMutStorage,
+    };
 
     use ibc_client_cw::types::{QueryMsg as TendermintQueryMsg, QueryResponse};
 
