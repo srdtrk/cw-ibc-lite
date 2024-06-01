@@ -132,7 +132,10 @@ mod execute {
     use cosmwasm_std::{Binary, IbcTimeout};
 
     use cw_ibc_lite_ics02_client::helpers;
-    use cw_ibc_lite_shared::types::ibc::{Height, Packet};
+    use cw_ibc_lite_shared::{
+        types::ibc::{Height, Packet},
+        utils,
+    };
 
     #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     pub fn send_packet(
@@ -152,7 +155,7 @@ mod execute {
         // Ensure the counterparty is the destination channel.
         let counterparty_id = ics02_contract
             .query(&deps.querier)
-            .counterparty(source_channel.as_str())?;
+            .counterparty(&source_channel)?;
         if counterparty_id != dest_channel {
             return Err(ContractError::invalid_counterparty(
                 counterparty_id,
@@ -161,24 +164,7 @@ mod execute {
         }
 
         // Ensure the timeout is valid.
-        // TODO: Not using the client's height for now unlike ibc-go. Make sure this is secure.
-        // TODO: Move this to utils.
-        if timeout.block().is_some() {
-            return Err(ContractError::InvalidTimeoutHeight);
-        }
-        timeout
-            .timestamp()
-            .ok_or(ContractError::EmptyTimestamp)
-            .and_then(|ts| {
-                if env.block.time > ts {
-                    return Err(ContractError::invalid_timeout_timestamp(
-                        env.block.time.seconds(),
-                        ts.seconds(),
-                    ));
-                }
-
-                Ok(())
-            })?;
+        utils::timeout::validate(&env, &timeout)?;
 
         // Construct the packet.
         let sequence =

@@ -3,3 +3,4 @@
 #![deny(clippy::nursery, clippy::pedantic, warnings)]
 
 pub mod types;
+pub mod utils;
