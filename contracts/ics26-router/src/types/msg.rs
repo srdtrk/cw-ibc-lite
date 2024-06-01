@@ -23,11 +23,11 @@ pub enum ExecuteMsg {
         /// The source client ID.
         source_channel: String,
         /// The source port ID.
-        source_port_id: String,
+        source_port: String,
         /// The destination client ID.
         dest_channel: String,
         /// The destination port ID.
-        dest_port_id: String,
+        dest_port: String,
         /// The packet data to commit.
         data: Binary,
         /// Timeout information for the packet.

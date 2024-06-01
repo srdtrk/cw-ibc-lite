@@ -57,9 +57,9 @@ pub fn execute(
     match msg {
         ExecuteMsg::SendPacket {
             source_channel,
-            source_port_id,
+            source_port,
             dest_channel,
-            dest_port_id,
+            dest_port,
             data,
             timeout,
         } => execute::send_packet(
@@ -67,9 +67,9 @@ pub fn execute(
             env,
             info,
             source_channel,
-            source_port_id,
+            source_port,
             dest_channel,
-            dest_port_id,
+            dest_port,
             data,
             timeout,
         ),
@@ -131,7 +131,7 @@ mod execute {
 
     use cosmwasm_std::{Binary, IbcTimeout};
 
-    use cw_ibc_lite_ics02_client::helpers as client_helpers;
+    use cw_ibc_lite_ics02_client as client;
     use cw_ibc_lite_shared::{
         types::{
             apps,
@@ -146,16 +146,16 @@ mod execute {
         env: Env,
         info: MessageInfo,
         source_channel: String,
-        source_port_id: String,
+        source_port: String,
         dest_channel: String,
-        dest_port_id: String,
+        dest_port: String,
         data: Binary,
         timeout: IbcTimeout,
     ) -> Result<Response, ContractError> {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
-        let ics02_contract = client_helpers::Ics02ClientContract::new(ics02_address);
+        let ics02_contract = client::helpers::Ics02ClientContract::new(ics02_address);
 
-        let ibc_app_address = state::IBC_APPS.load(deps.storage, &source_port_id)?;
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, &source_port)?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Ensure the counterparty is the destination channel.
@@ -174,13 +174,13 @@ mod execute {
 
         // Construct the packet.
         let sequence =
-            state::helpers::new_sequence_send(deps.storage, &source_port_id, &source_channel)?;
+            state::helpers::new_sequence_send(deps.storage, &source_port, &source_channel)?;
         let packet = Packet {
             sequence,
             source_channel,
-            source_port: source_port_id,
+            source_port,
             destination_channel: dest_channel,
-            destination_port: dest_port_id,
+            destination_port: dest_port,
             data,
             timeout,
         };
