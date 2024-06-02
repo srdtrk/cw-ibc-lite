@@ -243,6 +243,7 @@ mod execute {
         }
 
         // NOTE: Verify the packet commitment.
+        // TODO: Use the merkle prefix in counterparty
         let counterparty_commitment_path = state::packet_commitment_item::new(
             &packet.source_port,
             &packet.source_channel,
@@ -284,14 +285,48 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn acknowledgement(
-        _deps: DepsMut,
+        deps: DepsMut,
         _env: Env,
         _info: MessageInfo,
-        _packet: ibc::Packet,
+        packet: ibc::Packet,
         _acknowledgement: Binary,
         _proof_acked: Binary,
         _proof_height: ibc::Height,
     ) -> Result<Response, ContractError> {
+        let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
+        let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
+
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, &packet.source_channel)?;
+        let _ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
+
+        // Verify the counterparty.
+        let counterparty = ics02_contract
+            .query(&deps.querier)
+            .counterparty(&packet.source_channel)?;
+        if counterparty.client_id != packet.destination_channel {
+            return Err(ContractError::invalid_counterparty(
+                counterparty.client_id,
+                packet.destination_channel,
+            ));
+        }
+
+        // NOTE: If commitment cannot be loaded, this indicates that the acknowledgement has already
+        // been relayed or there is a misconfigured relayer attempting to prove an acknowledgement
+        // for a packet never sent. IBC Go treats this error as a no-op in order to prevent an entire
+        // relay transaction from failing and consuming unnecessary fees. We don't do this here.
+        let stored_packet_commitment = state::packet_commitment_item::new(
+            &packet.source_port,
+            &packet.source_channel,
+            packet.sequence,
+        )
+        .load(deps.storage)?;
+        if stored_packet_commitment != packet.to_commitment_bytes() {
+            return Err(ContractError::packet_commitment_mismatch(
+                stored_packet_commitment,
+                packet.to_commitment_bytes(),
+            ));
+        }
+
         todo!()
     }
 
