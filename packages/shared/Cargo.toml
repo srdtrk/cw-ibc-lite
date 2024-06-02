@@ -18,3 +18,4 @@ ibc-client-cw = { workspace = true }
 cw-ownable = { workspace = true }
 sha2 = { workspace = true }
 ibc-proto = { workspace = true }
+derive_more = { workspace = true }

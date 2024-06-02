@@ -16,6 +16,8 @@ pub enum ContractError {
     FromUTF8Error(#[from] std::string::FromUtf8Error),
     #[error("{0}")]
     UTF8Error(#[from] std::str::Utf8Error),
+    #[error("{0}")]
+    IdentifierError(#[from] ibc_core_host::types::error::IdentifierError),
 
     #[error("unauthorized")]
     Unauthorized,

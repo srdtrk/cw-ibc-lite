@@ -47,3 +47,4 @@ cw-ibc-lite-shared = { version = "0.1.0", path = "./packages/shared/" }
 cw-ibc-lite-ics02-client = { version = "0.1.0", path = "./contracts/ics02-client/", default-features = false }
 sha2 = "0.10.8"
 ibc-proto = "0.44.0"
+derive_more = { version = "0.99.17", default-features = false, features = [ "from", "into", "display", "try_into" ] }
