@@ -4,7 +4,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, IbcTimeout};
 use sha2::Digest;
 
-use super::error::ContractError;
+use super::{error::ContractError, paths::identifiers};
 
 /// Packet defines a type that carries data across different chains through IBC
 #[cw_serde]
@@ -12,15 +12,15 @@ pub struct Packet {
     /// number corresponds to the order of sends and receives, where a Packet
     /// with an earlier sequence number must be sent and received before a Packet
     /// with a later sequence number.
-    pub sequence: u64,
+    pub sequence: identifiers::Sequence,
     /// identifies the port on the sending chain.
-    pub source_port: String,
+    pub source_port: identifiers::PortId,
     /// identifies the channel end on the sending chain.
-    pub source_channel: String,
+    pub source_channel: identifiers::ChannelId,
     /// identifies the port on the receiving chain.
-    pub destination_port: String,
+    pub destination_port: identifiers::PortId,
     /// identifies the channel end on the receiving chain.
-    pub destination_channel: String,
+    pub destination_channel: identifiers::ChannelId,
     /// actual opaque bytes transferred directly to the application module
     pub data: Binary,
     /// block height after which the packet times out

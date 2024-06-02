@@ -139,6 +139,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 mod execute {
+    use std::str::FromStr;
+
     use crate::types::events;
 
     use super::{keys, state, ContractError, DepsMut, Env, MessageInfo, Response};
@@ -147,7 +149,11 @@ mod execute {
 
     use cw_ibc_lite_ics02_client as ics02_client;
     use cw_ibc_lite_shared::{
-        types::{apps, ibc},
+        types::{
+            apps, ibc,
+            paths::{ics24_host, identifiers},
+            storage::PureItem,
+        },
         utils,
     };
 
@@ -165,21 +171,26 @@ mod execute {
         data: Binary,
         timeout: IbcTimeout,
     ) -> Result<Response, ContractError> {
+        let source_channel = identifiers::ChannelId::from_str(&source_channel)?;
+        let source_port = identifiers::PortId::from_str(&source_port)?;
+        let dest_channel = identifiers::ChannelId::from_str(&dest_channel)?;
+        let dest_port = identifiers::PortId::from_str(&dest_port)?;
+
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
-        let ibc_app_address = state::IBC_APPS.load(deps.storage, &source_port)?;
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, source_port.as_str())?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Ensure the counterparty is the destination channel.
         let counterparty_id = ics02_contract
             .query(&deps.querier)
-            .counterparty(&source_channel)?
+            .counterparty(source_channel.as_str())?
             .client_id;
-        if counterparty_id != dest_channel {
+        if counterparty_id != dest_channel.as_str() {
             return Err(ContractError::invalid_counterparty(
                 counterparty_id,
-                dest_channel,
+                dest_channel.into(),
             ));
         }
 
@@ -187,8 +198,12 @@ mod execute {
         utils::timeout::validate(&env, &timeout)?;
 
         // Construct the packet.
-        let sequence =
-            state::helpers::new_sequence_send(deps.storage, &source_port, &source_channel)?;
+        let sequence: identifiers::Sequence = state::helpers::new_sequence_send(
+            deps.storage,
+            source_port.as_str(),
+            source_channel.as_str(),
+        )?
+        .into();
         let packet = ibc::Packet {
             sequence,
             source_channel,
@@ -228,28 +243,29 @@ mod execute {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
-        let ibc_app_address = state::IBC_APPS.load(deps.storage, &packet.destination_port)?;
+        let ibc_app_address =
+            state::IBC_APPS.load(deps.storage, packet.destination_port.as_str())?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Verify the counterparty.
         let counterparty = ics02_contract
             .query(&deps.querier)
-            .counterparty(&packet.destination_channel)?;
-        if counterparty.client_id != packet.source_channel {
+            .counterparty(packet.destination_channel.as_str())?;
+        if counterparty.client_id != packet.source_channel.as_str() {
             return Err(ContractError::invalid_counterparty(
                 counterparty.client_id,
-                packet.source_channel,
+                packet.source_channel.into(),
             ));
         }
 
         // NOTE: Verify the packet commitment.
         // TODO: Use the merkle prefix in counterparty
-        let counterparty_commitment_path = state::packet_commitment_item::new(
-            &packet.source_port,
-            &packet.source_channel,
-            packet.sequence,
-        )
-        .try_into()?;
+        let counterparty_commitment_path = ics24_host::PacketCommitmentPath {
+            port_id: packet.source_port.clone(),
+            channel_id: packet.source_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .into();
         let verify_membership_msg = VerifyMembershipMsgRaw {
             proof: proof_commitment.into(),
             path: counterparty_commitment_path,
@@ -260,7 +276,7 @@ mod execute {
         };
         let _ = ics02_contract
             .query(&deps.querier)
-            .client_querier(&packet.destination_channel)?
+            .client_querier(packet.destination_channel.as_str())?
             .verify_membership(verify_membership_msg)?;
 
         state::helpers::set_packet_receipt(deps.storage, &packet)?;
@@ -296,17 +312,17 @@ mod execute {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
-        let ibc_app_address = state::IBC_APPS.load(deps.storage, &packet.source_channel)?;
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, packet.source_channel.as_str())?;
         let _ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Verify the counterparty.
         let counterparty = ics02_contract
             .query(&deps.querier)
-            .counterparty(&packet.source_channel)?;
-        if counterparty.client_id != packet.destination_channel {
+            .counterparty(packet.source_channel.as_str())?;
+        if counterparty.client_id != packet.destination_channel.as_str() {
             return Err(ContractError::invalid_counterparty(
                 counterparty.client_id,
-                packet.destination_channel,
+                packet.destination_channel.into(),
             ));
         }
 
@@ -314,11 +330,11 @@ mod execute {
         // been relayed or there is a misconfigured relayer attempting to prove an acknowledgement
         // for a packet never sent. IBC Go treats this error as a no-op in order to prevent an entire
         // relay transaction from failing and consuming unnecessary fees. We don't do this here.
-        let stored_packet_commitment = state::packet_commitment_item::new(
-            &packet.source_port,
-            &packet.source_channel,
-            packet.sequence,
-        )
+        let stored_packet_commitment = PureItem::from(ics24_host::PacketCommitmentPath {
+            port_id: packet.source_port.clone(),
+            channel_id: packet.source_channel.clone(),
+            sequence: packet.sequence,
+        })
         .load(deps.storage)?;
         if stored_packet_commitment != packet.to_commitment_bytes() {
             return Err(ContractError::packet_commitment_mismatch(

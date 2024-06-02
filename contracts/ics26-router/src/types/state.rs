@@ -23,30 +23,6 @@ pub const ICS02_CLIENT_ADDRESS: Item<Addr> = Item::new("ics02_client_address");
 // TODO: remove this in CosmWasm v2 since it introduces the ability to add custom data to reply.
 pub const PACKET_TEMP_STORE: Item<ibc::Packet> = Item::new("recv_packet_temp_store");
 
-/// A collection of methods to access the packet commitment state.
-pub mod packet_commitment_item {
-    use super::{path, PureItem};
-
-    /// Returns a new [`PureItem`] for the packet commitment state.
-    pub fn new(
-        port_id: impl Into<String>,
-        channel_id: impl Into<String>,
-        sequence: u64,
-    ) -> PureItem {
-        let key = format!(
-            "{}/{}/{}/{}/{}/{}/{}",
-            path::PACKET_COMMITMENT_PREFIX,
-            path::PORT_PREFIX,
-            port_id.into(),
-            path::CHANNEL_PREFIX,
-            channel_id.into(),
-            path::SEQUENCE_PREFIX,
-            sequence
-        );
-        PureItem::new(&key)
-    }
-}
-
 /// A collection of methods to access the packet acknowledgment state.
 pub mod packet_ack_item {
     use super::{path, PureItem};
@@ -127,7 +103,9 @@ pub mod admin {
 /// Contains state storage helpers.
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
-    use cw_ibc_lite_shared::types::{error::ContractError, ibc};
+    use cw_ibc_lite_shared::types::{
+        error::ContractError, ibc, paths::ics24_host::PacketCommitmentPath, storage::PureItem,
+    };
 
     /// Generates a new sequence number for sending packets.
     ///
@@ -153,11 +131,12 @@ pub mod helpers {
         storage: &mut dyn Storage,
         packet: &ibc::Packet,
     ) -> Result<(), ContractError> {
-        let item = super::packet_commitment_item::new(
-            &packet.source_port,
-            &packet.source_channel,
-            packet.sequence,
-        );
+        let item: PureItem = PacketCommitmentPath {
+            port_id: packet.source_port.clone(),
+            channel_id: packet.source_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .into();
 
         if item.exists(storage) {
             return Err(ContractError::packet_already_commited(
@@ -179,9 +158,9 @@ pub mod helpers {
         packet: &ibc::Packet,
     ) -> Result<(), ContractError> {
         let item = super::packet_receipt_item::new(
-            &packet.destination_port,
-            &packet.destination_channel,
-            packet.sequence,
+            packet.destination_port.as_str(),
+            packet.destination_channel.as_str(),
+            packet.sequence.into(),
         );
 
         if item.exists(storage) {
@@ -204,11 +183,13 @@ pub mod helpers {
         packet: &ibc::Packet,
         ack: &ibc::Acknowledgement,
     ) -> Result<(), ContractError> {
-        let item = super::packet_ack_item::new(
-            &packet.destination_port,
-            &packet.destination_channel,
-            packet.sequence,
-        );
+        // TODO: This is WRONG! Fix this.
+        let item: PureItem = PacketCommitmentPath {
+            port_id: packet.destination_port.clone(),
+            channel_id: packet.destination_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .into();
 
         if item.exists(storage) {
             return Err(ContractError::packet_already_commited(

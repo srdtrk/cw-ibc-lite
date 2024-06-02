@@ -4,7 +4,10 @@ use ibc_core_host::types::path::{
     CHANNEL_PREFIX, PACKET_COMMITMENT_PREFIX, PORT_PREFIX, SEQUENCE_PREFIX,
 };
 
-// pub struct PacketCommitmentPath(ibc_core_host::types::path::CommitmentPath);
+use crate::types::storage::PureItem;
+
+// Re-export merkle path from `ibc-client-cw`
+pub use ibc_client_cw::types::MerklePath;
 
 /// Path for the packet commitment.
 #[derive(
@@ -22,6 +25,21 @@ pub struct PacketCommitmentPath {
     pub sequence: super::identifiers::Sequence,
 }
 
+// TODO: Adjust this once we implement the counterparty prefix logic
+impl From<PacketCommitmentPath> for MerklePath {
+    fn from(path: PacketCommitmentPath) -> Self {
+        Self {
+            key_path: vec![path.to_string()],
+        }
+    }
+}
+
+impl From<PacketCommitmentPath> for PureItem {
+    fn from(path: PacketCommitmentPath) -> Self {
+        Self::new(&path.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,7 +48,7 @@ mod tests {
     fn packet_commitment_path() {
         let path = PacketCommitmentPath {
             port_id: "transfer".parse().unwrap(),
-            channel_id: "channel-0".parse().unwrap(),
+            channel_id: "08-wasm-0".parse().unwrap(),
             sequence: 1.into(),
         };
 

@@ -68,12 +68,18 @@ pub mod send_packet {
                 packet.timeout.timestamp().unwrap().nanos().to_string(),
             ),
             Attribute::new(super::ATTRIBUTE_KEY_SEQUENCE, packet.sequence.to_string()),
-            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, &packet.source_port),
-            Attribute::new(super::ATTRIBUTE_KEY_SRC_CHANNEL, &packet.source_channel),
-            Attribute::new(super::ATTRIBUTE_KEY_DST_PORT, &packet.destination_port),
+            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, packet.source_port.as_str()),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SRC_CHANNEL,
+                packet.source_channel.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_PORT,
+                packet.destination_port.as_str(),
+            ),
             Attribute::new(
                 super::ATTRIBUTE_KEY_DST_CHANNEL,
-                &packet.destination_channel,
+                packet.destination_channel.as_str(),
             ),
         ])
     }
@@ -92,12 +98,18 @@ pub mod recv_packet {
                 super::ATTRIBUTE_KEY_DATA_HEX,
                 HexBinary::from(packet.data.as_slice()).to_hex(),
             ),
-            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, &packet.source_port),
-            Attribute::new(super::ATTRIBUTE_KEY_SRC_CHANNEL, &packet.source_channel),
-            Attribute::new(super::ATTRIBUTE_KEY_DST_PORT, &packet.destination_port),
+            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, packet.source_port.as_str()),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SRC_CHANNEL,
+                packet.source_channel.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_PORT,
+                packet.destination_port.as_str(),
+            ),
             Attribute::new(
                 super::ATTRIBUTE_KEY_DST_CHANNEL,
-                &packet.destination_channel,
+                packet.destination_channel.as_str(),
             ),
         ])
     }
@@ -121,12 +133,18 @@ pub mod write_acknowledgement {
                 super::ATTRIBUTE_KEY_ACK_DATA_HEX,
                 HexBinary::from(ack.as_slice()).to_hex(),
             ),
-            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, &packet.source_port),
-            Attribute::new(super::ATTRIBUTE_KEY_SRC_CHANNEL, &packet.source_channel),
-            Attribute::new(super::ATTRIBUTE_KEY_DST_PORT, &packet.destination_port),
+            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, packet.source_port.as_str()),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SRC_CHANNEL,
+                packet.source_channel.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_PORT,
+                packet.destination_port.as_str(),
+            ),
             Attribute::new(
                 super::ATTRIBUTE_KEY_DST_CHANNEL,
-                &packet.destination_channel,
+                packet.destination_channel.as_str(),
             ),
         ])
     }
