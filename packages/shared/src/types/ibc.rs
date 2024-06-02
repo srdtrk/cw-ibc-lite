@@ -4,6 +4,8 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, IbcTimeout};
 use sha2::Digest;
 
+use super::error::ContractError;
+
 /// Packet defines a type that carries data across different chains through IBC
 #[cw_serde]
 pub struct Packet {
@@ -100,9 +102,23 @@ impl Acknowledgement {
     }
 }
 
-impl From<cosmwasm_std::Binary> for Acknowledgement {
-    fn from(data: cosmwasm_std::Binary) -> Self {
-        Self(data.into())
+impl TryFrom<cosmwasm_std::Binary> for Acknowledgement {
+    type Error = ContractError;
+
+    fn try_from(data: cosmwasm_std::Binary) -> Result<Self, Self::Error> {
+        data.0.try_into()
+    }
+}
+
+impl TryFrom<Vec<u8>> for Acknowledgement {
+    type Error = ContractError;
+
+    fn try_from(data: Vec<u8>) -> Result<Self, Self::Error> {
+        if data.is_empty() {
+            return Err(ContractError::RecvPacketCallbackNoResponse);
+        }
+
+        Ok(Self(data))
     }
 }
 

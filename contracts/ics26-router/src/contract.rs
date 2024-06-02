@@ -358,7 +358,7 @@ mod reply {
                 let ack: ibc::Acknowledgement = resp
                     .data
                     .ok_or(ContractError::RecvPacketCallbackNoResponse)?
-                    .into();
+                    .try_into()?;
                 let packet = state::helpers::remove_packet_temp_store(deps.storage)?;
 
                 state::helpers::commit_packet_ack(deps.storage, &packet, &ack)?;
