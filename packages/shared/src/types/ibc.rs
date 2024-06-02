@@ -25,6 +25,10 @@ pub struct Packet {
     pub timeout: IbcTimeout,
 }
 
+/// Acknowledgement is the data returned by an IBC application after processing a packet.
+/// It is opaque to the relayer.
+pub struct Acknowledgement(Vec<u8>);
+
 /// Height is a monotonically increasing data type
 /// that can be compared against another Height for the purposes of updating and
 /// freezing clients
@@ -73,6 +77,38 @@ impl Packet {
         buf.extend_from_slice(self.destination_channel.as_bytes());
 
         sha2::Sha256::digest(&buf).to_vec()
+    }
+}
+
+impl Acknowledgement {
+    /// Creates a new acknowledgement from the given bytes.
+    #[must_use]
+    pub fn new(data: Vec<u8>) -> Self {
+        Self(data)
+    }
+
+    /// Returns the acknowledgement data as a slice.
+    #[must_use]
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+
+    /// Returns the serialized commitment bytes of the acknowledgement.
+    #[must_use]
+    pub fn to_commitment_bytes(&self) -> Vec<u8> {
+        sha2::Sha256::digest(&self.0).to_vec()
+    }
+}
+
+impl From<cosmwasm_std::Binary> for Acknowledgement {
+    fn from(data: cosmwasm_std::Binary) -> Self {
+        Self(data.into())
+    }
+}
+
+impl From<Acknowledgement> for Vec<u8> {
+    fn from(ack: Acknowledgement) -> Self {
+        ack.0
     }
 }
 

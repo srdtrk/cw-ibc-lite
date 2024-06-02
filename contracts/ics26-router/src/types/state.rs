@@ -1,7 +1,7 @@
 //! This module defines the state storage of the Contract.
 
 use cosmwasm_std::Addr;
-use cw_ibc_lite_shared::types::storage::PureItem;
+use cw_ibc_lite_shared::types::{ibc, storage::PureItem};
 
 use cw_storage_plus::{Item, Map};
 
@@ -18,6 +18,10 @@ pub const IBC_APPS: Map<&str, Addr> = Map::new("ibc_apps");
 
 /// The item for storing the ics02-client router contract address.
 pub const ICS02_CLIENT_ADDRESS: Item<Addr> = Item::new("ics02_client_address");
+
+/// The item for storing [`ibc::Packet`] to the temporary store for replies.
+// TODO: remove this in CosmWasm v2 since it introduces the ability to add custom data to reply.
+pub const PACKET_TEMP_STORE: Item<ibc::Packet> = Item::new("recv_packet_temp_store");
 
 /// A collection of methods to access the packet commitment state.
 pub mod packet_commitment_item {
@@ -123,7 +127,7 @@ pub mod admin {
 /// Contains state storage helpers.
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
-    use cw_ibc_lite_shared::types::{error::ContractError, ibc::Packet};
+    use cw_ibc_lite_shared::types::{error::ContractError, ibc};
 
     /// Generates a new sequence number for sending packets.
     ///
@@ -145,7 +149,10 @@ pub mod helpers {
     ///
     /// # Errors
     /// Returns an error if the packet has already been committed.
-    pub fn commit_packet(storage: &mut dyn Storage, packet: &Packet) -> Result<(), ContractError> {
+    pub fn commit_packet(
+        storage: &mut dyn Storage,
+        packet: &ibc::Packet,
+    ) -> Result<(), ContractError> {
         let item = super::packet_commitment_item::new(
             &packet.source_port,
             &packet.source_channel,
@@ -169,7 +176,7 @@ pub mod helpers {
     /// Returns an error if the receipt has already been committed.
     pub fn set_packet_receipt(
         storage: &mut dyn Storage,
-        packet: &Packet,
+        packet: &ibc::Packet,
     ) -> Result<(), ContractError> {
         let item = super::packet_receipt_item::new(
             &packet.destination_port,
@@ -185,5 +192,60 @@ pub mod helpers {
 
         item.save(storage, &[1]);
         Ok(())
+    }
+
+    /// Commits an acknowledgment to the provable packet acknowledgment store.
+    /// This is used to prove the `AcknowledgementPacket` in the counterparty chain.
+    ///
+    /// # Errors
+    /// Returns an error if the acknowledgment has already been committed.
+    pub fn commit_packet_ack(
+        storage: &mut dyn Storage,
+        packet: &ibc::Packet,
+        ack: &ibc::Acknowledgement,
+    ) -> Result<(), ContractError> {
+        let item = super::packet_ack_item::new(
+            &packet.destination_port,
+            &packet.destination_channel,
+            packet.sequence,
+        );
+
+        if item.exists(storage) {
+            return Err(ContractError::packet_already_commited(
+                item.as_slice().to_vec(),
+            ));
+        }
+
+        item.save(storage, &ack.to_commitment_bytes());
+        Ok(())
+    }
+
+    /// Saves the packet to [`super::PACKET_TEMP_STORE`].
+    ///
+    /// # Errors
+    /// Returns an error if the packet has already been committed.
+    pub fn save_packet_temp_store(
+        storage: &mut dyn Storage,
+        packet: &ibc::Packet,
+    ) -> Result<(), ContractError> {
+        if super::PACKET_TEMP_STORE.exists(storage) {
+            return Err(ContractError::packet_already_commited(
+                super::PACKET_TEMP_STORE.as_slice().to_vec(),
+            ));
+        }
+
+        Ok(super::PACKET_TEMP_STORE.save(storage, packet)?)
+    }
+
+    /// Loads and removes the packet from the temporary store for the reply to
+    ///
+    /// # Errors
+    /// Returns an error if the packet identifier cannot be loaded.
+    pub fn remove_packet_temp_store(
+        storage: &mut dyn Storage,
+    ) -> Result<ibc::Packet, ContractError> {
+        let packet = super::PACKET_TEMP_STORE.load(storage)?;
+        super::PACKET_TEMP_STORE.remove(storage);
+        Ok(packet)
     }
 }

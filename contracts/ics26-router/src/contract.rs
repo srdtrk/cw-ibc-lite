@@ -118,9 +118,10 @@ pub fn execute(
 /// Will return an error if the handler returns an error.
 #[cosmwasm_std::entry_point]
 #[allow(clippy::needless_pass_by_value)]
-pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
-        keys::reply::ON_RECV_PACKET => todo!(),
+        // TODO: Ensure that events are emitted for all the replies.
+        keys::reply::ON_RECV_PACKET => reply::write_acknowledgement(deps, env, msg.result),
         _ => Err(ContractError::UnknownReplyId(msg.id)),
     }
 }
@@ -146,10 +147,7 @@ mod execute {
 
     use cw_ibc_lite_ics02_client as ics02_client;
     use cw_ibc_lite_shared::{
-        types::{
-            apps,
-            ibc::{Height, Packet},
-        },
+        types::{apps, ibc},
         utils,
     };
 
@@ -191,7 +189,7 @@ mod execute {
         // Construct the packet.
         let sequence =
             state::helpers::new_sequence_send(deps.storage, &source_port, &source_channel)?;
-        let packet = Packet {
+        let packet = ibc::Packet {
             sequence,
             source_channel,
             source_port,
@@ -223,9 +221,9 @@ mod execute {
         deps: DepsMut,
         _env: Env,
         info: MessageInfo,
-        packet: Packet,
+        packet: ibc::Packet,
         proof_commitment: Binary,
-        proof_height: Height,
+        proof_height: ibc::Height,
     ) -> Result<Response, ContractError> {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
@@ -233,7 +231,7 @@ mod execute {
         let ibc_app_address = state::IBC_APPS.load(deps.storage, &packet.destination_port)?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
-        // Verify the
+        // Verify the counterparty.
         let counterparty = ics02_contract
             .query(&deps.querier)
             .counterparty(&packet.destination_channel)?;
@@ -265,7 +263,9 @@ mod execute {
             .verify_membership(verify_membership_msg)?;
 
         state::helpers::set_packet_receipt(deps.storage, &packet)?;
+        state::helpers::save_packet_temp_store(deps.storage, &packet)?;
 
+        let event = events::recv_packet::success(&packet);
         // NOTE: We must retreive a reply from the IBC app to set the acknowledgement.
         let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnRecvPacket {
             packet,
@@ -276,7 +276,10 @@ mod execute {
             keys::reply::ON_RECV_PACKET,
         );
 
-        Ok(Response::new().add_submessage(recv_packet_callback))
+        // TODO: Ensure event emission is reverted if the callback fails.
+        Ok(Response::new()
+            .add_submessage(recv_packet_callback)
+            .add_event(event))
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -284,10 +287,10 @@ mod execute {
         _deps: DepsMut,
         _env: Env,
         _info: MessageInfo,
-        _packet: Packet,
+        _packet: ibc::Packet,
         _acknowledgement: Binary,
         _proof_acked: Binary,
-        _proof_height: Height,
+        _proof_height: ibc::Height,
     ) -> Result<Response, ContractError> {
         todo!()
     }
@@ -297,9 +300,9 @@ mod execute {
         _deps: DepsMut,
         _env: Env,
         _info: MessageInfo,
-        _packet: Packet,
+        _packet: ibc::Packet,
         _proof_unreceived: Binary,
-        _proof_height: Height,
+        _proof_height: ibc::Height,
         _next_sequence_recv: u64,
     ) -> Result<Response, ContractError> {
         todo!()
@@ -330,6 +333,44 @@ mod execute {
             contract_address.as_str(),
             info.sender.as_str(),
         )))
+    }
+}
+
+mod reply {
+    use cosmwasm_std::SubMsgResult;
+    use cw_ibc_lite_shared::types::ibc;
+
+    use crate::types::events;
+
+    use super::{state, ContractError, DepsMut, Env, Response};
+
+    /// Handles the reply to
+    /// [`cw_ibc_lite_shared::types::apps::callbacks::IbcAppCallbackMsg::OnRecvPacket`].
+    /// It writes the acknowledgement and emits the write acknowledgement events.
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn write_acknowledgement(
+        deps: DepsMut,
+        _env: Env,
+        result: SubMsgResult,
+    ) -> Result<Response, ContractError> {
+        match result {
+            SubMsgResult::Ok(resp) => {
+                let ack: ibc::Acknowledgement = resp
+                    .data
+                    .ok_or(ContractError::RecvPacketCallbackNoResponse)?
+                    .into();
+                let packet = state::helpers::remove_packet_temp_store(deps.storage)?;
+
+                state::helpers::commit_packet_ack(deps.storage, &packet, &ack)?;
+                Ok(
+                    Response::new()
+                        .add_event(events::write_acknowledgement::success(&packet, &ack)),
+                )
+            }
+            SubMsgResult::Err(err) => {
+                unreachable!("unexpected `SubMsg::reply_on_success`, error: {err}")
+            }
+        }
     }
 }
 

@@ -44,6 +44,11 @@ pub enum ContractError {
     EmptyTimestamp,
     #[error("packet already commited: key: {:02x?}", key)]
     PacketAlreadyCommited { key: Vec<u8> },
+
+    #[error(
+        "recv packet callback must return an acknowledgement data, but it returned nothing, async acknowledgement is not supported"
+    )]
+    RecvPacketCallbackNoResponse,
 }
 
 impl ContractError {
