@@ -466,8 +466,9 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-ibc-lite-ics02-client",
+ "cw-ibc-lite-ics26-router",
  "cw-ibc-lite-shared",
+ "cw-ownable",
  "cw-storage-plus",
  "cw2",
  "cw20",

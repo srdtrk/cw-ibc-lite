@@ -25,7 +25,9 @@ pub enum ExecuteMsg {
         /// The source port ID.
         source_port: String,
         /// The destination client ID.
-        dest_channel: String,
+        /// Dest channel will be retrieved from ics02-client if not provided.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dest_channel: Option<String>,
         /// The destination port ID.
         dest_port: String,
         /// The packet data to commit.

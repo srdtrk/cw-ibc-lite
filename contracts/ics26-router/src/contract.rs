@@ -166,16 +166,11 @@ mod execute {
         info: MessageInfo,
         source_channel: String,
         source_port: String,
-        dest_channel: String,
+        dest_channel: Option<String>,
         dest_port: String,
         data: Binary,
         timeout: IbcTimeout,
     ) -> Result<Response, ContractError> {
-        let source_channel = identifiers::ChannelId::from_str(&source_channel)?;
-        let source_port = identifiers::PortId::from_str(&source_port)?;
-        let dest_channel = identifiers::ChannelId::from_str(&dest_channel)?;
-        let dest_port = identifiers::PortId::from_str(&dest_port)?;
-
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
@@ -187,12 +182,20 @@ mod execute {
             .query(&deps.querier)
             .counterparty(source_channel.as_str())?
             .client_id;
-        if counterparty_id != dest_channel.as_str() {
-            return Err(ContractError::invalid_counterparty(
-                counterparty_id,
-                dest_channel.into(),
-            ));
+        if let Some(dest_channel) = dest_channel.as_ref() {
+            if counterparty_id != dest_channel.as_str() {
+                return Err(ContractError::invalid_counterparty(
+                    counterparty_id,
+                    dest_channel.into(),
+                ));
+            }
         }
+
+        let source_channel = identifiers::ChannelId::from_str(&source_channel)?;
+        let source_port = identifiers::PortId::from_str(&source_port)?;
+        let dest_port = identifiers::PortId::from_str(&dest_port)?;
+        let dest_channel =
+            identifiers::ChannelId::from_str(dest_channel.as_ref().unwrap_or(&counterparty_id))?;
 
         // Ensure the timeout is valid.
         utils::timeout::validate(&env, &timeout)?;
@@ -404,7 +407,7 @@ mod execute {
             let _ = identifiers::PortId::from_str(&port_id)?;
             port_id
         } else {
-            format!("{}{}", keys::PORT_ID_PREFIX, contract_address)
+            utils::apps::contract_port_id(&contract_address)?.into()
         };
 
         state::IBC_APPS.save(deps.storage, &port_id, &contract_address)?;

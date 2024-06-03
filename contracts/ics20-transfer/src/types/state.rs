@@ -1,30 +1,8 @@
 //! This module defines the state storage of the Contract.
 
-/// A collection of methods to access the admin of the contract.
-pub mod admin {
-    use cosmwasm_std::{Addr, Env, QuerierWrapper};
-    use cw_ibc_lite_shared::types::error::ContractError;
+use cosmwasm_std::Uint128;
+use cw_storage_plus::Map;
 
-    /// Asserts that the given address is the admin of the contract.
-    ///
-    /// # Errors
-    /// Returns an error if the given address is not the admin of the contract or the contract
-    /// doesn't have an admin.
-    #[allow(clippy::module_name_repetitions)]
-    pub fn assert_admin(
-        env: &Env,
-        querier: &QuerierWrapper,
-        addr: &Addr,
-    ) -> Result<(), ContractError> {
-        let admin = querier
-            .query_wasm_contract_info(&env.contract.address)?
-            .admin
-            .ok_or(ContractError::Unauthorized)?;
-
-        if admin != addr.as_str() {
-            return Err(ContractError::Unauthorized);
-        }
-
-        Ok(())
-    }
-}
+/// The item that stores the escrowed tokens per denom.
+/// It maps (`channel_id`, `denom`) to the escrowed amount.
+pub const ESCROW: Map<(&str, &str), Uint128> = Map::new("escrow");

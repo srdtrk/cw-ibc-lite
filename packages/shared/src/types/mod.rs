@@ -6,3 +6,4 @@ pub mod error;
 pub mod ibc;
 pub mod paths;
 pub mod storage;
+pub mod transfer;

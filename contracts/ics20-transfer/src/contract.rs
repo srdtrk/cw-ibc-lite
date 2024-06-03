@@ -21,8 +21,10 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    // NOTE: Contract admin is assumed to be the ics26-router contract.
+    // NOTE: Sender is assumed to be the ics26-router contract.
+    // NOTE: Admin is assumed to be gov module address.
     cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, None)?;
 
     todo!()
 }
@@ -58,16 +60,26 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> Result<Binary, ContractE
 }
 
 mod execute {
-    use cw_ibc_lite_shared::types::{apps::callbacks::IbcAppCallbackMsg, error::TransferError};
+    use cosmwasm_std::IbcTimeout;
+    use cw_ibc_lite_ics26_router::{
+        helpers::IbcLiteRouterContract, types::msg::ExecuteMsg as Ics26ExecuteMsg,
+    };
+    use cw_ibc_lite_shared::{
+        types::{
+            apps::callbacks::IbcAppCallbackMsg,
+            transfer::{error::TransferError, packet::Ics20Packet},
+        },
+        utils,
+    };
 
-    use crate::types::{msg::TransferMsg, state};
+    use crate::types::msg::TransferMsg;
 
-    use super::{ContractError, DepsMut, Env, MessageInfo, Response};
+    use super::{keys, ContractError, DepsMut, Env, MessageInfo, Response};
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn receive(
-        _deps: DepsMut,
-        _env: Env,
+        deps: DepsMut,
+        env: Env,
         info: MessageInfo,
         msg: cw20::Cw20ReceiveMsg,
     ) -> Result<Response, ContractError> {
@@ -75,21 +87,49 @@ mod execute {
             return Err(TransferError::UnexpectedNativeToken.into());
         }
 
-        // NOTE: We use the sender contract address as the denom.
-        let _denom = info.sender.as_str();
-        let _transfer_msg: TransferMsg = cosmwasm_std::from_json(msg.msg)?;
-        todo!()
+        let ics26_address = cw_ownable::get_ownership(deps.storage)?
+            .owner
+            .ok_or(ContractError::Unauthorized)?;
+        let ics26_contract = IbcLiteRouterContract::new(ics26_address);
+
+        let transfer_msg: TransferMsg = cosmwasm_std::from_json(msg.msg)?;
+        let denom = info.sender.to_string(); // NOTE: We use the sender contract address as the denom.
+        let source_port = utils::apps::contract_port_id(&env.contract.address)?.into();
+        let timeout_seconds = transfer_msg
+            .timeout
+            .unwrap_or(keys::DEFAULT_TIMEOUT_SECONDS);
+        let timeout = IbcTimeout::with_timestamp(env.block.time.plus_seconds(timeout_seconds));
+
+        let packet = Ics20Packet::try_new(
+            msg.amount,
+            denom,
+            transfer_msg.receiver,
+            msg.sender,
+            transfer_msg.memo,
+        )?;
+
+        let send_packet_msg = Ics26ExecuteMsg::SendPacket {
+            source_port,
+            source_channel: transfer_msg.source_channel,
+            dest_port: keys::DEFAULT_PORT_ID.to_string(),
+            dest_channel: None, // NOTE: Router will determine the dest channel.
+            data: cosmwasm_std::to_json_binary(&packet)?,
+            timeout,
+        };
+        let ics26_msg = ics26_contract.call(send_packet_msg)?;
+
+        // TODO: Add events
+        Ok(Response::new().add_message(ics26_msg))
     }
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn receive_ibc_callback(
         deps: DepsMut,
-        env: Env,
+        _env: Env,
         info: MessageInfo,
         msg: IbcAppCallbackMsg,
     ) -> Result<Response, ContractError> {
-        state::admin::assert_admin(&env, &deps.querier, &info.sender)?;
-
+        cw_ownable::assert_owner(deps.storage, &info.sender)?;
         match msg {
             IbcAppCallbackMsg::OnSendPacket { .. } => todo!(),
             IbcAppCallbackMsg::OnRecvPacket { .. } => todo!(),
