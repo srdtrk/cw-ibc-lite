@@ -8,6 +8,8 @@ pub const EVENT_TYPE_SEND_PACKET: &str = "send_packet";
 pub const EVENT_TYPE_RECV_PACKET: &str = "recv_packet";
 /// `EVENT_TYPE_ACKNOWLEDGE_PACKET` is the event type for writing an acknowledgement
 pub const EVENT_TYPE_WRITE_ACKNOWLEDGEMENT: &str = "write_acknowledgement";
+/// `EVENT_TYPE_ACKNOWLEDGE_PACKET` is the event type for an acknowledge packet event
+pub const EVENT_TYPE_ACKNOWLEDGE_PACKET: &str = "acknowledge_packet";
 
 /// `ATTRIBUTE_KEY_CONTRACT_ADDRESS` is the attribute key for the contract address
 pub const ATTRIBUTE_KEY_CONTRACT_ADDRESS: &str = "contract_address";
@@ -146,6 +148,34 @@ pub mod write_acknowledgement {
                 super::ATTRIBUTE_KEY_DST_CHANNEL,
                 packet.destination_channel.as_str(),
             ),
+        ])
+    }
+}
+
+/// Contains event messages emitted during the reply to
+/// [`cw_ibc_lite_shared::types::apps::callbacks::IbcAppCallbackMsg::OnAcknowledgementPacket`]
+pub mod acknowledge_packet {
+    use cosmwasm_std::{Attribute, Event};
+    use cw_ibc_lite_shared::types::ibc;
+
+    /// `acknowledge_packet` is the event message for an acknowledge packet event
+    #[must_use]
+    pub fn success(packet: &ibc::Packet) -> Event {
+        Event::new(super::EVENT_TYPE_ACKNOWLEDGE_PACKET).add_attributes(vec![
+            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, packet.source_port.as_str()),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SRC_CHANNEL,
+                packet.source_channel.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_PORT,
+                packet.destination_port.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_CHANNEL,
+                packet.destination_channel.as_str(),
+            ),
+            Attribute::new(super::ATTRIBUTE_KEY_SEQUENCE, packet.sequence.to_string()),
         ])
     }
 }

@@ -55,6 +55,8 @@ pub enum ContractError {
         expected: Vec<u8>,
         provided: Vec<u8>,
     },
+    #[error("packet commitment not found: key: {:02x?}", key)]
+    PacketCommitmentNotFound { key: Vec<u8> },
 
     #[error(
         "recv packet callback must return an acknowledgement data, but it returned nothing, async acknowledgement is not supported"
@@ -106,6 +108,12 @@ impl ContractError {
     #[must_use]
     pub const fn packet_commitment_mismatch(expected: Vec<u8>, provided: Vec<u8>) -> Self {
         Self::PacketCommitmentMismatch { expected, provided }
+    }
+
+    /// Returns a new [`ContractError::PacketCommitmentNotFound`] with the given key.
+    #[must_use]
+    pub const fn packet_commitment_not_found(key: Vec<u8>) -> Self {
+        Self::PacketCommitmentNotFound { key }
     }
 }
 

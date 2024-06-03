@@ -1,7 +1,8 @@
 //! This module contains types for provable store keys.
 
 use ibc_core_host::types::path::{
-    CHANNEL_PREFIX, PACKET_COMMITMENT_PREFIX, PORT_PREFIX, SEQUENCE_PREFIX,
+    CHANNEL_PREFIX, PACKET_ACK_PREFIX, PACKET_COMMITMENT_PREFIX, PACKET_RECEIPT_PREFIX,
+    PORT_PREFIX, SEQUENCE_PREFIX,
 };
 
 use crate::types::storage::PureItem;
@@ -25,6 +26,38 @@ pub struct PacketCommitmentPath {
     pub sequence: super::identifiers::Sequence,
 }
 
+/// Path for the packet acknowledgement.
+#[derive(
+    Clone, Debug, PartialEq, Eq, derive_more::Display, serde::Serialize, serde::Deserialize,
+)]
+#[display(
+    fmt = "{PACKET_ACK_PREFIX}/{PORT_PREFIX}/{port_id}/{CHANNEL_PREFIX}/{channel_id}/{SEQUENCE_PREFIX}/{sequence}"
+)]
+pub struct PacketAcknowledgementPath {
+    /// Port identifier.
+    pub port_id: super::identifiers::PortId,
+    /// Channel identifier.
+    pub channel_id: super::identifiers::ChannelId,
+    /// Sequence number.
+    pub sequence: super::identifiers::Sequence,
+}
+
+/// Path for the packet receipt.
+#[derive(
+    Clone, Debug, PartialEq, Eq, derive_more::Display, serde::Serialize, serde::Deserialize,
+)]
+#[display(
+    fmt = "{PACKET_RECEIPT_PREFIX}/{PORT_PREFIX}/{port_id}/{CHANNEL_PREFIX}/{channel_id}/{SEQUENCE_PREFIX}/{sequence}"
+)]
+pub struct PacketReceiptPath {
+    /// Port identifier.
+    pub port_id: super::identifiers::PortId,
+    /// Channel identifier.
+    pub channel_id: super::identifiers::ChannelId,
+    /// Sequence number.
+    pub sequence: super::identifiers::Sequence,
+}
+
 // TODO: Adjust this once we implement the counterparty prefix logic
 impl From<PacketCommitmentPath> for MerklePath {
     fn from(path: PacketCommitmentPath) -> Self {
@@ -36,6 +69,36 @@ impl From<PacketCommitmentPath> for MerklePath {
 
 impl From<PacketCommitmentPath> for PureItem {
     fn from(path: PacketCommitmentPath) -> Self {
+        Self::new(&path.to_string())
+    }
+}
+
+// TODO: Adjust this once we implement the counterparty prefix logic
+impl From<PacketAcknowledgementPath> for MerklePath {
+    fn from(path: PacketAcknowledgementPath) -> Self {
+        Self {
+            key_path: vec![path.to_string()],
+        }
+    }
+}
+
+impl From<PacketAcknowledgementPath> for PureItem {
+    fn from(path: PacketAcknowledgementPath) -> Self {
+        Self::new(&path.to_string())
+    }
+}
+
+// TODO: Adjust this once we implement the counterparty prefix logic
+impl From<PacketReceiptPath> for MerklePath {
+    fn from(path: PacketReceiptPath) -> Self {
+        Self {
+            key_path: vec![path.to_string()],
+        }
+    }
+}
+
+impl From<PacketReceiptPath> for PureItem {
+    fn from(path: PacketReceiptPath) -> Self {
         Self::new(&path.to_string())
     }
 }

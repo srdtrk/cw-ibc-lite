@@ -303,17 +303,17 @@ mod execute {
     pub fn acknowledgement(
         deps: DepsMut,
         _env: Env,
-        _info: MessageInfo,
+        info: MessageInfo,
         packet: ibc::Packet,
-        _acknowledgement: Binary,
-        _proof_acked: Binary,
-        _proof_height: ibc::Height,
+        acknowledgement: Binary,
+        proof_acked: Binary,
+        proof_height: ibc::Height,
     ) -> Result<Response, ContractError> {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
         let ibc_app_address = state::IBC_APPS.load(deps.storage, packet.source_channel.as_str())?;
-        let _ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
+        let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Verify the counterparty.
         let counterparty = ics02_contract
@@ -343,7 +343,36 @@ mod execute {
             ));
         }
 
-        todo!()
+        // Verify the packet acknowledgement.
+        let packet_ack_path: ics24_host::MerklePath = ics24_host::PacketAcknowledgementPath {
+            port_id: packet.destination_port.clone(),
+            channel_id: packet.destination_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .into();
+        let _ = ics02_contract
+            .query(&deps.querier)
+            .client_querier(packet.source_channel.as_str())?
+            .verify_membership(VerifyMembershipMsgRaw {
+                proof: proof_acked.into(),
+                path: packet_ack_path,
+                value: acknowledgement.to_vec(),
+                height: proof_height.into(),
+                delay_time_period: 0,
+                delay_block_period: 0,
+            })?;
+
+        state::helpers::delete_packet_commitment(deps.storage, &packet)?;
+
+        let event = events::acknowledge_packet::success(&packet);
+        let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnAcknowledgementPacket {
+            packet,
+            acknowledgement,
+            relayer: info.sender.into(),
+        };
+        let ack_callback = ibc_app_contract.call(callback_msg)?;
+
+        Ok(Response::new().add_message(ack_callback).add_event(event))
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -370,8 +399,9 @@ mod execute {
         let contract_address = deps.api.addr_validate(&contract_address)?;
         let port_id = if let Some(port_id) = port_id {
             // NOTE: Only the admin can register an IBC app with a custom port ID.
-            // TODO: Add restrictions to the custom port ID. Such as not using `/`.
             state::admin::assert_admin(&env, &deps.querier, &info.sender)?;
+            // Ensure the port ID is valid.
+            let _ = identifiers::PortId::from_str(&port_id)?;
             port_id
         } else {
             format!("{}{}", keys::PORT_ID_PREFIX, contract_address)

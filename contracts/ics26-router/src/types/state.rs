@@ -1,11 +1,9 @@
 //! This module defines the state storage of the Contract.
 
 use cosmwasm_std::Addr;
-use cw_ibc_lite_shared::types::{ibc, storage::PureItem};
+use cw_ibc_lite_shared::types::ibc;
 
 use cw_storage_plus::{Item, Map};
-
-use ibc_core_host::types::path;
 
 /// The map for the next sequence to send.
 /// Maps (`port_id`, `channel_id`) to the next sequence to send.
@@ -22,54 +20,6 @@ pub const ICS02_CLIENT_ADDRESS: Item<Addr> = Item::new("ics02_client_address");
 /// The item for storing [`ibc::Packet`] to the temporary store for replies.
 // TODO: remove this in CosmWasm v2 since it introduces the ability to add custom data to reply.
 pub const PACKET_TEMP_STORE: Item<ibc::Packet> = Item::new("recv_packet_temp_store");
-
-/// A collection of methods to access the packet acknowledgment state.
-pub mod packet_ack_item {
-    use super::{path, PureItem};
-
-    /// Returns a new [`PureItem`] for the packet acknowledgment state.
-    pub fn new(
-        port_id: impl Into<String>,
-        channel_id: impl Into<String>,
-        sequence: u64,
-    ) -> PureItem {
-        let key = format!(
-            "{}/{}/{}/{}/{}/{}/{}",
-            path::PACKET_ACK_PREFIX,
-            path::PORT_PREFIX,
-            port_id.into(),
-            path::CHANNEL_PREFIX,
-            channel_id.into(),
-            path::SEQUENCE_PREFIX,
-            sequence
-        );
-        PureItem::new(&key)
-    }
-}
-
-/// A collection of methods to access the packet receipt state.
-pub mod packet_receipt_item {
-    use super::{path, PureItem};
-
-    /// Returns a new [`PureItem`] for the packet receipt state.
-    pub fn new(
-        port_id: impl Into<String>,
-        channel_id: impl Into<String>,
-        sequence: u64,
-    ) -> PureItem {
-        let key = format!(
-            "{}/{}/{}/{}/{}/{}/{}",
-            path::PACKET_RECEIPT_PREFIX,
-            path::PORT_PREFIX,
-            port_id.into(),
-            path::CHANNEL_PREFIX,
-            channel_id.into(),
-            path::SEQUENCE_PREFIX,
-            sequence
-        );
-        PureItem::new(&key)
-    }
-}
 
 /// A collection of methods to access the admin of the contract.
 pub mod admin {
@@ -104,7 +54,10 @@ pub mod admin {
 pub mod helpers {
     use cosmwasm_std::{StdResult, Storage};
     use cw_ibc_lite_shared::types::{
-        error::ContractError, ibc, paths::ics24_host::PacketCommitmentPath, storage::PureItem,
+        error::ContractError,
+        ibc,
+        paths::ics24_host::{PacketAcknowledgementPath, PacketCommitmentPath, PacketReceiptPath},
+        storage::PureItem,
     };
 
     /// Generates a new sequence number for sending packets.
@@ -148,6 +101,32 @@ pub mod helpers {
         Ok(())
     }
 
+    /// Deletes a packet commitment from the provable packet commitment store.
+    ///
+    /// # Errors
+    /// Returns an error if the packet commitment cannot be found.
+    pub fn delete_packet_commitment(
+        storage: &mut dyn Storage,
+        packet: &ibc::Packet,
+    ) -> Result<(), ContractError> {
+        let item: PureItem = PacketCommitmentPath {
+            port_id: packet.source_port.clone(),
+            channel_id: packet.source_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .into();
+
+        // NOTE: These consume extra gas indeed. We can remove these if this is an issue.
+        if !item.exists(storage) {
+            return Err(ContractError::packet_commitment_not_found(
+                item.as_slice().to_vec(),
+            ));
+        }
+
+        item.remove(storage);
+        Ok(())
+    }
+
     /// Sets the packet receipt in the provable packet receipt store.
     /// This is used to prevent replay.
     ///
@@ -157,11 +136,12 @@ pub mod helpers {
         storage: &mut dyn Storage,
         packet: &ibc::Packet,
     ) -> Result<(), ContractError> {
-        let item = super::packet_receipt_item::new(
-            packet.destination_port.as_str(),
-            packet.destination_channel.as_str(),
-            packet.sequence.into(),
-        );
+        let item: PureItem = PacketReceiptPath {
+            port_id: packet.destination_port.clone(),
+            channel_id: packet.destination_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .into();
 
         if item.exists(storage) {
             return Err(ContractError::packet_already_commited(
@@ -183,8 +163,7 @@ pub mod helpers {
         packet: &ibc::Packet,
         ack: &ibc::Acknowledgement,
     ) -> Result<(), ContractError> {
-        // TODO: This is WRONG! Fix this.
-        let item: PureItem = PacketCommitmentPath {
+        let item: PureItem = PacketAcknowledgementPath {
             port_id: packet.destination_port.clone(),
             channel_id: packet.destination_channel.clone(),
             sequence: packet.sequence,
