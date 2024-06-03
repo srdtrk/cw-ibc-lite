@@ -31,6 +31,7 @@ pub enum ExecuteMsg {
 }
 
 /// Query messages supported by all light client contracts in ibc-lite
+#[cw_ownable::cw_ownable_query]
 #[derive(QueryResponses)]
 #[cw_serde]
 pub enum QueryMsg {

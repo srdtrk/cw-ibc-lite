@@ -18,6 +18,8 @@ pub enum ContractError {
     UTF8Error(#[from] std::str::Utf8Error),
     #[error("{0}")]
     IdentifierError(#[from] ibc_core_host::types::error::IdentifierError),
+    #[error("{0}")]
+    TransferError(#[from] TransferError),
 
     #[error("unauthorized")]
     Unauthorized,
@@ -62,6 +64,15 @@ pub enum ContractError {
         "recv packet callback must return an acknowledgement data, but it returned nothing, async acknowledgement is not supported"
     )]
     RecvPacketCallbackNoResponse,
+}
+
+/// `TransferError` is the error type returned by the ics20 transfer contract.
+#[allow(missing_docs, clippy::module_name_repetitions)]
+#[non_exhaustive]
+#[derive(Error, Debug)]
+pub enum TransferError {
+    #[error("unexpected native token")]
+    UnexpectedNativeToken,
 }
 
 impl ContractError {

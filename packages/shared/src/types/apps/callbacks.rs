@@ -6,9 +6,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, StdResult};
 
-// Export the derive macro
-pub use cw_ibc_lite_derive::ibc_lite_app_callback;
-
 /// All IBC applications built with `cw-ibc-lite` must handle these callback messages.
 #[cw_serde]
 pub enum IbcAppCallbackMsg {

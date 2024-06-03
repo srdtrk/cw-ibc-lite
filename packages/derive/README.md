@@ -11,7 +11,7 @@ message enum variant into their `ExecuteMsg` enum.
 
 ```rust
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cw_ibc_lite_shared::types::apps::callbacks::ibc_lite_callback;
+use cw_ibc_lite_shared::types::apps::helpers::ibc_lite_callback;
 
 #[cw_serde]
 pub struct InstantiateMsg {}

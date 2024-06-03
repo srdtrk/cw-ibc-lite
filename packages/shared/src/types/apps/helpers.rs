@@ -6,6 +6,9 @@ use super::callbacks::{self};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+// Export the derive macro
+pub use cw_ibc_lite_derive::ibc_lite_app_callback;
+
 use cosmwasm_std::{Addr, CosmosMsg, StdResult, WasmMsg};
 
 /// `IbcApplicationContract` is a wrapper around Addr that provides helpers

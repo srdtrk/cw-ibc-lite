@@ -13,7 +13,7 @@ use syn::{parse_macro_input, AttributeArgs, DataEnum, DeriveInput};
 /// For example:
 ///
 /// ```
-/// use cw_ibc_lite_shared::types::apps::callbacks::ibc_lite_app_callback;
+/// use cw_ibc_lite_shared::types::apps::helpers::ibc_lite_app_callback;
 /// use cosmwasm_schema::cw_serde;
 ///
 /// #[ibc_lite_app_callback]
@@ -35,7 +35,7 @@ use syn::{parse_macro_input, AttributeArgs, DataEnum, DeriveInput};
 /// occurs before the addition of the field.
 ///
 /// ```compile_fail
-/// use cw_ibc_lite_shared::types::apps::callbacks::ibc_lite_app_callback;
+/// use cw_ibc_lite_shared::types::apps::helpers::ibc_lite_app_callback;
 /// use cosmwasm_schema::cw_serde;
 ///
 /// #[derive(Clone)]

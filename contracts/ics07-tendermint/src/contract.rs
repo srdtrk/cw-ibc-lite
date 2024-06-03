@@ -75,8 +75,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             query::check_for_misbehaviour(deps, env, msg.try_into()?)
         }
         QueryMsg::VerifyMembership(_) | QueryMsg::VerifyNonMembership(_) => {
-            query::execute_query(deps, env, msg.try_into()?)
+            query::sudo_query(deps, env, msg.try_into()?)
         }
+        QueryMsg::Ownership {} => query::ownership(deps),
     }
 }
 
@@ -145,7 +146,7 @@ mod query {
     }
 
     #[allow(clippy::needless_pass_by_value, clippy::module_name_repetitions)]
-    pub fn execute_query(
+    pub fn sudo_query(
         deps: Deps,
         env: Env,
         msg: ibc_client_cw::types::SudoMsg,
@@ -155,5 +156,11 @@ mod query {
         let mut ctx = TendermintContext::new_mut(deps_mut, env)?;
 
         ctx.sudo(msg).map_err(ContractError::from)
+    }
+
+    pub fn ownership(deps: Deps) -> Result<Binary, ContractError> {
+        Ok(cosmwasm_std::to_json_binary(&cw_ownable::get_ownership(
+            deps.storage,
+        )?)?)
     }
 }
