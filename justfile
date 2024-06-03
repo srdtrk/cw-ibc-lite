@@ -11,7 +11,15 @@ lint:
   cargo fmt --all -- --check
   cargo clippy --all-targets --all-features -- -D warnings
 
-# Generate JSON schema files for all contracts in the project
+# Generate JSON schema files for all contracts in the project in a directory named `schemas`
 generate-schemas:
-  echo "Generating JSON schema files..."
-  cargo run --bin schema
+  mkdir -p schemas
+  echo "Generating JSON schema files for ics02-client..."
+  cargo run --bin schema -p cw-ibc-lite-ics02-client
+  cp schema/cw-ibc-lite-ics02-client.json schemas/
+  echo "Generating JSON schema files for ics07-tendermint..."
+  cargo run --bin schema -p cw-ibc-lite-ics07-tendermint
+  cp schema/cw-ibc-lite-ics07-tendermint.json schemas/
+  echo "Generating JSON schema files for ics26-router..."
+  cargo run --bin schema -p cw-ibc-lite-ics26-router
+  cp schema/cw-ibc-lite-ics26-router.json schemas/
