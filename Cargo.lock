@@ -402,6 +402,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-ibc-lite-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "cw-ibc-lite-ics02-client"
 version = "0.1.0"
 dependencies = [
@@ -459,6 +468,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-ibc-lite-derive",
  "cw-ownable",
  "derive_more",
  "ibc-client-cw",
