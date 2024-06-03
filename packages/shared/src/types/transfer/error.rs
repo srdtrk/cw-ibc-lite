@@ -17,4 +17,18 @@ pub enum TransferError {
     EmptyReceiver,
     #[error("empty sender")]
     EmptySender,
+    #[error("invalid ICS-20 version")]
+    InvalidVersion,
+    #[error("invalid port ID: expected {expected}, actual {actual}")]
+    UnexpectedPortId { expected: String, actual: String },
+}
+
+impl TransferError {
+    /// Creates [`TransferError::UnexpectedPortId`] error.
+    pub fn unexpected_port_id(expected: impl Into<String>, actual: impl Into<String>) -> Self {
+        Self::UnexpectedPortId {
+            expected: expected.into(),
+            actual: actual.into(),
+        }
+    }
 }
