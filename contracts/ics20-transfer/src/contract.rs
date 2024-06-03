@@ -72,7 +72,7 @@ mod execute {
         utils,
     };
 
-    use crate::types::msg::TransferMsg;
+    use crate::{ibc, types::msg::TransferMsg};
 
     use super::{keys, ContractError, DepsMut, Env, MessageInfo, Response};
 
@@ -125,16 +125,35 @@ mod execute {
     #[allow(clippy::needless_pass_by_value)]
     pub fn receive_ibc_callback(
         deps: DepsMut,
-        _env: Env,
+        env: Env,
         info: MessageInfo,
         msg: IbcAppCallbackMsg,
     ) -> Result<Response, ContractError> {
         cw_ownable::assert_owner(deps.storage, &info.sender)?;
         match msg {
-            IbcAppCallbackMsg::OnSendPacket { .. } => todo!(),
-            IbcAppCallbackMsg::OnRecvPacket { .. } => todo!(),
-            IbcAppCallbackMsg::OnAcknowledgementPacket { .. } => todo!(),
-            IbcAppCallbackMsg::OnTimeoutPacket { .. } => todo!(),
+            IbcAppCallbackMsg::OnSendPacket {
+                packet,
+                version,
+                sender,
+            } => ibc::relay::on_send_packet(deps, env, info, packet, version, sender),
+            IbcAppCallbackMsg::OnRecvPacket { packet, relayer } => {
+                ibc::relay::on_recv_packet(deps, env, info, packet, relayer)
+            }
+            IbcAppCallbackMsg::OnAcknowledgementPacket {
+                packet,
+                acknowledgement,
+                relayer,
+            } => ibc::relay::on_acknowledgement_packet(
+                deps,
+                env,
+                info,
+                packet,
+                acknowledgement,
+                relayer,
+            ),
+            IbcAppCallbackMsg::OnTimeoutPacket { packet, relayer } => {
+                ibc::relay::on_timeout_packet(deps, env, info, packet, relayer)
+            }
         }
     }
 }
