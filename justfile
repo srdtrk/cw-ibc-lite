@@ -23,3 +23,5 @@ generate-schemas:
   echo "Generating JSON schema files for ics26-router..."
   cargo run --bin schema -p cw-ibc-lite-ics26-router
   cp schema/cw-ibc-lite-ics26-router.json schemas/
+  echo "Generating JSON schema files for ics20-transfer..."
+  cargo run --bin schema -p cw-ibc-lite-ics20-transfer

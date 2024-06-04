@@ -22,6 +22,7 @@ pub const ICS02_CLIENT_ADDRESS: Item<Addr> = Item::new("ics02_client_address");
 pub const PACKET_TEMP_STORE: Item<ibc::Packet> = Item::new("recv_packet_temp_store");
 
 /// A collection of methods to access the admin of the contract.
+// TODO: Do not use admin for owner management. Use `cw_ownable` instead.
 pub mod admin {
     use cosmwasm_std::{Addr, Env, QuerierWrapper};
     use cw_ibc_lite_shared::types::error::ContractError;
