@@ -1,6 +1,6 @@
 //! This module handles the execution logic of the contract.
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 
 use cw_ibc_lite_shared::types::error::ContractError;
 
@@ -46,6 +46,21 @@ pub fn execute(
         ExecuteMsg::ReceiveIbcAppCallback(callback_msg) => {
             execute::receive_ibc_callback(deps, env, info, callback_msg)
         }
+    }
+}
+
+/// Handles the replies to the submessages.
+///
+/// # Errors
+/// Will return an error if the handler returns an error.
+#[cosmwasm_std::entry_point]
+#[allow(clippy::needless_pass_by_value)]
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg.id {
+        keys::reply::ON_RECV_PACKET_CW20_TRANSFER => {
+            reply::on_recv_packet_cw20_transfer(deps, env, msg.result)
+        }
+        _ => Err(ContractError::UnknownReplyId(msg.id)),
     }
 }
 
@@ -153,6 +168,47 @@ mod execute {
             ),
             IbcAppCallbackMsg::OnTimeoutPacket { packet, relayer } => {
                 ibc::relay::on_timeout_packet(deps, env, info, packet, relayer)
+            }
+        }
+    }
+}
+
+mod reply {
+    use crate::types::state::{self, ESCROW};
+
+    use super::{ContractError, DepsMut, Env, Response};
+
+    use cosmwasm_std::SubMsgResult;
+    use cw_ibc_lite_shared::types::transfer::packet::Ics20Ack;
+
+    /// Handles the reply to
+    /// [`cw_ibc_lite_shared::types::apps::callbacks::IbcAppCallbackMsg::OnRecvPacket`].
+    /// It writes the acknowledgement and emits the write acknowledgement events.
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn on_recv_packet_cw20_transfer(
+        deps: DepsMut,
+        _env: Env,
+        result: SubMsgResult,
+    ) -> Result<Response, ContractError> {
+        match result {
+            SubMsgResult::Ok(_) => {
+                unreachable!("unexpected response on `SubMsg::reply_on_err`")
+            }
+            SubMsgResult::Err(err) => {
+                let reply_args = state::helpers::load_recv_packet_reply_args(deps.storage)?;
+                // undo the escrow reduction
+                ESCROW.update(
+                    deps.storage,
+                    (&reply_args.channel_id, &reply_args.denom),
+                    |bal| -> Result<_, ContractError> {
+                        let mut bal = bal.unwrap();
+                        bal += reply_args.amount;
+                        Ok(bal)
+                    },
+                )?;
+
+                Ok(Response::new().set_data(Ics20Ack::error(err).to_vec()))
             }
         }
     }
