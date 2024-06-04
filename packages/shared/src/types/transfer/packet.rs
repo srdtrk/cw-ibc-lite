@@ -30,10 +30,13 @@ pub struct Ics20Packet {
 pub type Ics20Ack = AcknowledgementData;
 
 impl Ics20Ack {
+    /// The wrapped bytes for a successful ICS20 acknowledgement.
+    pub const SUCCESS_BYTES: &'static [u8] = b"1";
+
     /// Creates a successful ICS20 acknowledgement.
     #[must_use]
     pub fn success() -> Self {
-        Self::Result(b"1".into())
+        Self::Result(Self::SUCCESS_BYTES.into())
     }
 
     /// Creates an error ICS20 acknowledgement.

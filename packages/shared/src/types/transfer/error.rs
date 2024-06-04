@@ -29,6 +29,8 @@ pub enum TransferError {
     InsufficientFundsInEscrow { escrowed: String, requested: String },
     #[error("reentrancy safeguard")]
     Reentrancy,
+    #[error("unknown acknowledgement: {0}")]
+    UnknownAcknowledgement(String),
 }
 
 impl TransferError {
