@@ -14,3 +14,9 @@ pub const ICS20_VERSION: &str = "ics20-1";
 pub const DEFAULT_PORT_ID: &str = "transfer";
 /// `DEFAULT_TIMEOUT_SECONDS` is the default timeout in seconds for the ICS20 module.
 pub const DEFAULT_TIMEOUT_SECONDS: u64 = 600;
+
+/// Contains the reply ids for various `SubMsg` replies
+pub mod reply {
+    /// `ON_RECV_PACKET_CW20_TRANSFER` is the reply id for the `on_recv_packet` reply
+    pub const ON_RECV_PACKET_CW20_TRANSFER: u64 = 1;
+}

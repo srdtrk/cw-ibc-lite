@@ -21,6 +21,14 @@ pub enum TransferError {
     InvalidVersion,
     #[error("invalid port ID: expected {expected}, actual {actual}")]
     UnexpectedPortId { expected: String, actual: String },
+    #[error("unexpected channel ID: expected {expected}, actual {actual}")]
+    UnexpectedChannelId { expected: String, actual: String },
+    #[error("no foreign tokens allowed")]
+    NoForeignTokens,
+    #[error("insufficient funds in escrow")]
+    InsufficientFundsInEscrow { escrowed: String, requested: String },
+    #[error("reentrancy safeguard")]
+    Reentrancy,
 }
 
 impl TransferError {
@@ -29,6 +37,25 @@ impl TransferError {
         Self::UnexpectedPortId {
             expected: expected.into(),
             actual: actual.into(),
+        }
+    }
+
+    /// Creates [`TransferError::UnexpectedChannelId`] error.
+    pub fn unexpected_channel_id(expected: impl Into<String>, actual: impl Into<String>) -> Self {
+        Self::UnexpectedChannelId {
+            expected: expected.into(),
+            actual: actual.into(),
+        }
+    }
+
+    /// Creates [`TransferError::InsufficientFundsInEscrow`] error.
+    pub fn insufficient_funds_in_escrow(
+        escrowed: impl Into<String>,
+        requested: impl Into<String>,
+    ) -> Self {
+        Self::InsufficientFundsInEscrow {
+            escrowed: escrowed.into(),
+            requested: requested.into(),
         }
     }
 }

@@ -2,6 +2,8 @@
 
 use cosmwasm_std::Uint128;
 
+use crate::types::apps::callbacks::response::AcknowledgementData;
+
 use super::error::TransferError;
 
 /// The format for sending an ics20 packet.
@@ -21,6 +23,34 @@ pub struct Ics20Packet {
     /// optional memo for the IBC transfer
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
+}
+
+/// This is a generic ICS acknowledgement format.
+/// This is compatible with the JSON serialization
+pub type Ics20Ack = AcknowledgementData;
+
+impl Ics20Ack {
+    /// Creates a successful ICS20 acknowledgement.
+    #[must_use]
+    pub fn success() -> Self {
+        Self::Result(b"1".into())
+    }
+
+    /// Creates an error ICS20 acknowledgement.
+    #[must_use]
+    pub fn error(err: impl Into<String>) -> Self {
+        Self::Error(err.into())
+    }
+
+    /// Converts the ICS20 acknowledgement to a vector of bytes to be returned in the response.
+    /// This is a wrapper around `cosmwasm_std::to_json_vec`.
+    ///
+    /// # Panics
+    /// Panics if the ICS20 acknowledgement cannot be serialized to JSON.
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<u8> {
+        cosmwasm_std::to_json_vec(self).unwrap()
+    }
 }
 
 impl Ics20Packet {
