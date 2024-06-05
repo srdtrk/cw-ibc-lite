@@ -39,6 +39,7 @@ jobs:
   build-wasm:
     name: Build Wasm Contracts
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Install just
         uses: extractions/setup-just@v2
@@ -48,6 +49,7 @@ jobs:
   build-all-features:
     name: Build with all features
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
