@@ -58,6 +58,8 @@ pub enum ContractError {
     },
     #[error("packet commitment not found: key: {:02x?}", key)]
     PacketCommitmentNotFound { key: Vec<u8> },
+    #[error("merkle prefix is empty, it must at least have one element (can be empty string)")]
+    EmptyMerklePrefix,
 
     #[error(
         "recv packet callback must return an acknowledgement data, but it returned nothing, async acknowledgement is not supported"

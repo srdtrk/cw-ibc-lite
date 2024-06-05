@@ -5,7 +5,7 @@ use ibc_core_host::types::path::{
     PORT_PREFIX, SEQUENCE_PREFIX,
 };
 
-use crate::types::storage::PureItem;
+use crate::types::{error::ContractError, storage::PureItem};
 
 // Re-export merkle path from `ibc-client-cw`
 pub use ibc_client_cw::types::MerklePath;
@@ -58,12 +58,75 @@ pub struct PacketReceiptPath {
     pub sequence: super::identifiers::Sequence,
 }
 
-// TODO: Adjust this once we implement the counterparty prefix logic
-impl From<PacketCommitmentPath> for MerklePath {
-    fn from(path: PacketCommitmentPath) -> Self {
-        Self {
-            key_path: vec![path.to_string()],
-        }
+impl PacketCommitmentPath {
+    /// Converts the path to a prefixed merkle path.
+    /// If a prefix is provided, the path is appended to the prefix.
+    ///
+    /// # Errors
+    /// Returns an error if the prefix is provided and is empty.
+    pub fn to_prefixed_merkle_path(
+        &self,
+        prefix: Option<MerklePath>,
+    ) -> Result<MerklePath, ContractError> {
+        let mut prefix = prefix.unwrap_or(MerklePath {
+            key_path: vec![String::new()],
+        });
+
+        prefix
+            .key_path
+            .last_mut()
+            .ok_or(ContractError::EmptyMerklePrefix)?
+            .push_str(&self.to_string());
+
+        Ok(prefix)
+    }
+}
+
+impl PacketAcknowledgementPath {
+    /// Converts the path to a prefixed merkle path.
+    /// If a prefix is provided, the path is appended to the prefix.
+    ///
+    /// # Errors
+    /// Returns an error if the prefix is provided and is empty.
+    pub fn to_prefixed_merkle_path(
+        &self,
+        prefix: Option<MerklePath>,
+    ) -> Result<MerklePath, ContractError> {
+        let mut prefix = prefix.unwrap_or(MerklePath {
+            key_path: vec![String::new()],
+        });
+
+        prefix
+            .key_path
+            .last_mut()
+            .ok_or(ContractError::EmptyMerklePrefix)?
+            .push_str(&self.to_string());
+
+        Ok(prefix)
+    }
+}
+
+impl PacketReceiptPath {
+    /// Converts the path to a prefixed merkle path.
+    /// If a prefix is provided, the path is appended to the prefix.
+    ///
+    /// # Errors
+    /// Returns an error if the prefix is provided and is empty.
+    pub fn to_prefixed_merkle_path(
+        &self,
+        prefix: Option<MerklePath>,
+    ) -> Result<MerklePath, ContractError> {
+        let mut prefix = prefix.unwrap_or(MerklePath {
+            key_path: vec![String::new()],
+        });
+
+        prefix
+            .key_path
+            .last_mut()
+            .ok_or(ContractError::EmptyMerklePrefix)?
+            .push_str(&self.to_string());
+
+        Ok(prefix)
     }
 }
 
@@ -72,31 +135,11 @@ impl From<PacketCommitmentPath> for PureItem {
         Self::new(&path.to_string())
     }
 }
-
-// TODO: Adjust this once we implement the counterparty prefix logic
-impl From<PacketAcknowledgementPath> for MerklePath {
-    fn from(path: PacketAcknowledgementPath) -> Self {
-        Self {
-            key_path: vec![path.to_string()],
-        }
-    }
-}
-
 impl From<PacketAcknowledgementPath> for PureItem {
     fn from(path: PacketAcknowledgementPath) -> Self {
         Self::new(&path.to_string())
     }
 }
-
-// TODO: Adjust this once we implement the counterparty prefix logic
-impl From<PacketReceiptPath> for MerklePath {
-    fn from(path: PacketReceiptPath) -> Self {
-        Self {
-            key_path: vec![path.to_string()],
-        }
-    }
-}
-
 impl From<PacketReceiptPath> for PureItem {
     fn from(path: PacketReceiptPath) -> Self {
         Self::new(&path.to_string())

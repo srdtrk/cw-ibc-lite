@@ -215,14 +215,13 @@ mod execute {
             ));
         }
 
-        // NOTE: Verify the packet commitment.
-        // FIX: Use the merkle prefix in counterparty
+        // Verify the packet commitment.
         let counterparty_commitment_path = ics24_host::PacketCommitmentPath {
             port_id: packet.source_port.clone(),
             channel_id: packet.source_channel.clone(),
             sequence: packet.sequence,
         }
-        .into();
+        .to_prefixed_merkle_path(counterparty.merkle_path_prefix)?;
         let verify_membership_msg = VerifyMembershipMsgRaw {
             proof: proof_commitment.into(),
             path: counterparty_commitment_path,
@@ -305,7 +304,7 @@ mod execute {
             channel_id: packet.destination_channel.clone(),
             sequence: packet.sequence,
         }
-        .into();
+        .to_prefixed_merkle_path(counterparty.merkle_path_prefix)?;
         let _ = ics02_contract
             .query(&deps.querier)
             .client_querier(packet.source_channel.as_str())?
