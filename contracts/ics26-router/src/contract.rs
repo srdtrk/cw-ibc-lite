@@ -175,8 +175,7 @@ mod execute {
         let send_packet_event = events::send_packet::success(&packet);
         let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnSendPacket {
             packet,
-            // FIX: Use proper version.
-            version: keys::CONTRACT_VERSION.to_string(),
+            version: msg.version,
             sender: info.sender.into(),
         };
         let send_packet_callback = ibc_app_contract.call(callback_msg)?;
