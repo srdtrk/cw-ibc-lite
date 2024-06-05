@@ -68,6 +68,7 @@ pub enum QueryMsg {
     },
     /// Get the counterparty of a client. Returns an error if the client does not have a
     /// counterparty or the client does not exist.
+    // TODO: Delete
     #[returns(super::state::CounterpartyInfo)]
     Counterparty {
         /// The client id of the client to get the counterparty of.

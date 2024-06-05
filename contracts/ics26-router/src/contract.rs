@@ -55,57 +55,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SendPacket {
-            source_channel,
-            source_port,
-            dest_channel,
-            dest_port,
-            data,
-            timeout,
-        } => execute::send_packet(
-            deps,
-            env,
-            info,
-            source_channel,
-            source_port,
-            dest_channel,
-            dest_port,
-            data,
-            timeout,
-        ),
-        ExecuteMsg::RecvPacket {
-            packet,
-            proof_commitment,
-            proof_height,
-        } => execute::recv_packet(deps, env, info, packet, proof_commitment, proof_height),
-        ExecuteMsg::Acknowledgement {
-            packet,
-            acknowledgement,
-            proof_acked,
-            proof_height,
-        } => execute::acknowledgement(
-            deps,
-            env,
-            info,
-            packet,
-            acknowledgement,
-            proof_acked,
-            proof_height,
-        ),
-        ExecuteMsg::Timeout {
-            packet,
-            proof_unreceived,
-            proof_height,
-            next_sequence_recv,
-        } => execute::timeout(
-            deps,
-            env,
-            info,
-            packet,
-            proof_unreceived,
-            proof_height,
-            next_sequence_recv,
-        ),
+        ExecuteMsg::SendPacket(send_msg) => execute::send_packet(deps, env, info, send_msg),
+        ExecuteMsg::RecvPacket(recv_msg) => execute::recv_packet(deps, env, info, recv_msg),
+        ExecuteMsg::Acknowledgement(ack_msg) => execute::acknowledgement(deps, env, info, ack_msg),
+        ExecuteMsg::Timeout(timeout_msg) => execute::timeout(deps, env, info, timeout_msg),
         ExecuteMsg::RegisterIbcApp { port_id, address } => {
             execute::register_ibc_app(deps, env, info, port_id, address)
         }
@@ -141,11 +94,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 mod execute {
     use std::str::FromStr;
 
-    use crate::types::events;
+    use crate::types::{
+        events,
+        msg::execute::{AcknowledgementMsg, RecvPacketMsg, SendPacketMsg, TimeoutMsg},
+    };
 
     use super::{keys, state, ContractError, DepsMut, Env, MessageInfo, Response};
 
-    use cosmwasm_std::{Binary, IbcTimeout, SubMsg};
+    use cosmwasm_std::SubMsg;
 
     use cw_ibc_lite_ics02_client as ics02_client;
     use cw_ibc_lite_shared::{
@@ -164,25 +120,20 @@ mod execute {
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        source_channel: String,
-        source_port: String,
-        dest_channel: Option<String>,
-        dest_port: String,
-        data: Binary,
-        timeout: IbcTimeout,
+        msg: SendPacketMsg,
     ) -> Result<Response, ContractError> {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
-        let ibc_app_address = state::IBC_APPS.load(deps.storage, source_port.as_str())?;
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, msg.source_port.as_str())?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Ensure the counterparty is the destination channel.
         let counterparty_id = ics02_contract
             .query(&deps.querier)
-            .counterparty(source_channel.as_str())?
+            .counterparty(msg.source_channel.as_str())?
             .client_id;
-        if let Some(dest_channel) = dest_channel.as_ref() {
+        if let Some(dest_channel) = msg.dest_channel.as_ref() {
             if counterparty_id != dest_channel.as_str() {
                 return Err(ContractError::invalid_counterparty(
                     counterparty_id,
@@ -191,14 +142,15 @@ mod execute {
             }
         }
 
-        let source_channel = identifiers::ChannelId::from_str(&source_channel)?;
-        let source_port = identifiers::PortId::from_str(&source_port)?;
-        let dest_port = identifiers::PortId::from_str(&dest_port)?;
-        let dest_channel =
-            identifiers::ChannelId::from_str(dest_channel.as_ref().unwrap_or(&counterparty_id))?;
+        let source_channel = identifiers::ChannelId::from_str(&msg.source_channel)?;
+        let source_port = identifiers::PortId::from_str(&msg.source_port)?;
+        let dest_port = identifiers::PortId::from_str(&msg.dest_port)?;
+        let dest_channel = identifiers::ChannelId::from_str(
+            msg.dest_channel.as_ref().unwrap_or(&counterparty_id),
+        )?;
 
         // Ensure the timeout is valid.
-        utils::timeout::validate(&env, &timeout)?;
+        utils::timeout::validate(&env, &msg.timeout)?;
 
         // Construct the packet.
         let sequence: identifiers::Sequence = state::helpers::new_sequence_send(
@@ -213,8 +165,8 @@ mod execute {
             source_port,
             destination_channel: dest_channel,
             destination_port: dest_port,
-            data,
-            timeout,
+            data: msg.data,
+            timeout: msg.timeout,
         };
 
         // TODO: Ensure it is ok to commit packet and emit events before the callback.
@@ -223,6 +175,7 @@ mod execute {
         let send_packet_event = events::send_packet::success(&packet);
         let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnSendPacket {
             packet,
+            // FIX: Use proper version.
             version: keys::CONTRACT_VERSION.to_string(),
             sender: info.sender.into(),
         };
@@ -239,10 +192,12 @@ mod execute {
         deps: DepsMut,
         _env: Env,
         info: MessageInfo,
-        packet: ibc::Packet,
-        proof_commitment: Binary,
-        proof_height: ibc::Height,
+        msg: RecvPacketMsg,
     ) -> Result<Response, ContractError> {
+        let packet = msg.packet;
+        let proof_commitment = msg.proof_commitment;
+        let proof_height = msg.proof_height;
+
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
@@ -262,7 +217,7 @@ mod execute {
         }
 
         // NOTE: Verify the packet commitment.
-        // TODO: Use the merkle prefix in counterparty
+        // FIX: Use the merkle prefix in counterparty
         let counterparty_commitment_path = ics24_host::PacketCommitmentPath {
             port_id: packet.source_port.clone(),
             channel_id: packet.source_channel.clone(),
@@ -272,7 +227,7 @@ mod execute {
         let verify_membership_msg = VerifyMembershipMsgRaw {
             proof: proof_commitment.into(),
             path: counterparty_commitment_path,
-            value: packet.to_commitment_bytes(),
+            value: packet.to_commitment_vec(),
             height: proof_height.into(),
             delay_time_period: 0,
             delay_block_period: 0,
@@ -307,11 +262,10 @@ mod execute {
         deps: DepsMut,
         _env: Env,
         info: MessageInfo,
-        packet: ibc::Packet,
-        acknowledgement: Binary,
-        proof_acked: Binary,
-        proof_height: ibc::Height,
+        msg: AcknowledgementMsg,
     ) -> Result<Response, ContractError> {
+        let packet = msg.packet;
+
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
@@ -339,10 +293,10 @@ mod execute {
             sequence: packet.sequence,
         })
         .load(deps.storage)?;
-        if stored_packet_commitment != packet.to_commitment_bytes() {
+        if stored_packet_commitment != packet.to_commitment_vec() {
             return Err(ContractError::packet_commitment_mismatch(
                 stored_packet_commitment,
-                packet.to_commitment_bytes(),
+                packet.to_commitment_vec(),
             ));
         }
 
@@ -357,10 +311,10 @@ mod execute {
             .query(&deps.querier)
             .client_querier(packet.source_channel.as_str())?
             .verify_membership(VerifyMembershipMsgRaw {
-                proof: proof_acked.into(),
+                proof: msg.proof_acked.into(),
                 path: packet_ack_path,
-                value: acknowledgement.to_vec(),
-                height: proof_height.into(),
+                value: msg.acknowledgement.to_vec(),
+                height: msg.proof_height.into(),
                 delay_time_period: 0,
                 delay_block_period: 0,
             })?;
@@ -370,7 +324,7 @@ mod execute {
         let event = events::acknowledge_packet::success(&packet);
         let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnAcknowledgementPacket {
             packet,
-            acknowledgement,
+            acknowledgement: msg.acknowledgement,
             relayer: info.sender.into(),
         };
         let ack_callback = ibc_app_contract.call(callback_msg)?;
@@ -383,10 +337,7 @@ mod execute {
         _deps: DepsMut,
         _env: Env,
         _info: MessageInfo,
-        _packet: ibc::Packet,
-        _proof_unreceived: Binary,
-        _proof_height: ibc::Height,
-        _next_sequence_recv: u64,
+        _msg: TimeoutMsg,
     ) -> Result<Response, ContractError> {
         todo!()
     }

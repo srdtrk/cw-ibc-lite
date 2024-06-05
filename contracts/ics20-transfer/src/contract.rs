@@ -77,7 +77,7 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> Result<Binary, ContractE
 mod execute {
     use cosmwasm_std::IbcTimeout;
     use cw_ibc_lite_ics26_router::{
-        helpers::IbcLiteRouterContract, types::msg::ExecuteMsg as Ics26ExecuteMsg,
+        helpers::IbcLiteRouterContract, types::msg::execute::SendPacketMsg,
     };
     use cw_ibc_lite_shared::{
         types::{
@@ -123,13 +123,14 @@ mod execute {
             transfer_msg.memo,
         )?;
 
-        let send_packet_msg = Ics26ExecuteMsg::SendPacket {
+        let send_packet_msg = SendPacketMsg {
             source_port,
             source_channel: transfer_msg.source_channel,
             dest_port: keys::DEFAULT_PORT_ID.to_string(),
             dest_channel: None, // NOTE: Router will determine the dest channel.
             data: cosmwasm_std::to_json_binary(&packet)?,
             timeout,
+            version: keys::ICS20_VERSION.to_string(),
         };
         let ics26_msg = ics26_contract.call(send_packet_msg)?;
 

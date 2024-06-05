@@ -3,9 +3,6 @@
 //! This module defines the messages that this contract receives.
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, IbcTimeout};
-
-use cw_ibc_lite_shared::types::ibc::{Height, Packet};
 
 /// The message to instantiate the contract.
 #[cw_serde]
@@ -18,57 +15,16 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Send a packet to another client.
-    /// From https://github.com/cosmos/ibc-go/blob/cf191f4ab3ff27a2e68b3dac17c547669f80102c/modules/core/04-channel/types/tx.pb.go#L563
-    SendPacket {
-        /// The source client ID.
-        source_channel: String,
-        /// The source port ID.
-        source_port: String,
-        /// The destination client ID.
-        /// Dest channel will be retrieved from ics02-client if not provided.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        dest_channel: Option<String>,
-        /// The destination port ID.
-        dest_port: String,
-        /// The packet data to commit.
-        data: Binary,
-        /// Timeout information for the packet.
-        timeout: IbcTimeout,
-    },
+    SendPacket(execute::SendPacketMsg),
     /// Receive a packet from another client.
     /// From https://github.com/cosmos/ibc-go/blob/cf191f4ab3ff27a2e68b3dac17c547669f80102c/modules/core/04-channel/types/tx.pb.go#L646
-    RecvPacket {
-        /// The packet to receive.
-        packet: Packet,
-        /// The proof of the packet commitment.
-        proof_commitment: Binary,
-        /// The height of the proof.
-        proof_height: Height,
-    },
+    RecvPacket(execute::RecvPacketMsg),
     /// Acknowledge a packet sent to another client.
     /// From https://github.com/cosmos/ibc-go/blob/cf191f4ab3ff27a2e68b3dac17c547669f80102c/modules/core/04-channel/types/tx.pb.go#L887
-    Acknowledgement {
-        /// The packet to acknowledge.
-        packet: Packet,
-        /// The acknowledgement data.
-        acknowledgement: Binary,
-        /// The proof of the acknowledgement.
-        proof_acked: Binary,
-        /// The height of the proof.
-        proof_height: Height,
-    },
+    Acknowledgement(execute::AcknowledgementMsg),
     /// Timeout a packet sent to another client.
     /// From https://github.com/cosmos/ibc-go/blob/cf191f4ab3ff27a2e68b3dac17c547669f80102c/modules/core/04-channel/types/tx.pb.go#L725
-    Timeout {
-        /// The packet to timeout.
-        packet: Packet,
-        /// The proof that the packet is unreceived.
-        proof_unreceived: Binary,
-        /// The height of the proof.
-        proof_height: Height,
-        /// The next sequence receive number.
-        next_sequence_recv: u64,
-    },
+    Timeout(execute::TimeoutMsg),
     /// Anyone can register an IBC app with this contract.
     /// A custom port ID can only be provided if the caller is the admin of the contract.
     RegisterIbcApp {
@@ -92,4 +48,89 @@ pub enum QueryMsg {
         /// The port ID of the router.
         port_id: String,
     },
+}
+
+/// Contains the messages wrapped by [`super::ExecuteMsg`].
+pub mod execute {
+    use super::cw_serde;
+    use cosmwasm_std::{Binary, IbcTimeout};
+    use cw_ibc_lite_shared::types::ibc::{Height, Packet};
+
+    /// The message to send a packet to another client.
+    #[cw_serde]
+    pub struct SendPacketMsg {
+        /// The source client ID.
+        pub source_channel: String,
+        /// The source port ID.
+        pub source_port: String,
+        /// The destination client ID.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub dest_channel: Option<String>,
+        /// The destination port ID.
+        pub dest_port: String,
+        /// The packet data to commit.
+        pub data: Binary,
+        /// Timeout information for the packet.
+        pub timeout: IbcTimeout,
+        /// The application version.
+        pub version: String,
+    }
+
+    /// The message to receive a packet from another client.
+    #[cw_serde]
+    pub struct RecvPacketMsg {
+        /// The packet to receive.
+        pub packet: Packet,
+        /// The proof of the packet commitment.
+        pub proof_commitment: Binary,
+        /// The height of the proof.
+        pub proof_height: Height,
+    }
+
+    /// The message to acknowledge a packet sent to another client.
+    #[cw_serde]
+    pub struct AcknowledgementMsg {
+        /// The packet to acknowledge.
+        pub packet: Packet,
+        /// The acknowledgement data.
+        pub acknowledgement: Binary,
+        /// The proof of the acknowledgement.
+        pub proof_acked: Binary,
+        /// The height of the proof.
+        pub proof_height: Height,
+    }
+
+    /// The message to timeout a packet sent to another client.
+    #[cw_serde]
+    pub struct TimeoutMsg {
+        /// The packet to timeout.
+        pub packet: Packet,
+        /// The proof that the packet is unreceived.
+        pub proof_unreceived: Binary,
+        /// The height of the proof.
+        pub proof_height: Height,
+        /// The next sequence receive number.
+        pub next_sequence_recv: u64,
+    }
+
+    impl From<SendPacketMsg> for super::ExecuteMsg {
+        fn from(msg: SendPacketMsg) -> Self {
+            Self::SendPacket(msg)
+        }
+    }
+    impl From<RecvPacketMsg> for super::ExecuteMsg {
+        fn from(msg: RecvPacketMsg) -> Self {
+            Self::RecvPacket(msg)
+        }
+    }
+    impl From<AcknowledgementMsg> for super::ExecuteMsg {
+        fn from(msg: AcknowledgementMsg) -> Self {
+            Self::Acknowledgement(msg)
+        }
+    }
+    impl From<TimeoutMsg> for super::ExecuteMsg {
+        fn from(msg: TimeoutMsg) -> Self {
+            Self::Timeout(msg)
+        }
+    }
 }

@@ -98,7 +98,7 @@ pub mod helpers {
             ));
         }
 
-        item.save(storage, &packet.to_commitment_bytes());
+        item.save(storage, &packet.to_commitment_vec());
         Ok(())
     }
 

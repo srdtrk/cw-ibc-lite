@@ -62,7 +62,7 @@ impl Packet {
     /// # Panics
     /// Panics if the timeout timestamp is not set.
     #[must_use]
-    pub fn to_commitment_bytes(&self) -> Vec<u8> {
+    pub fn to_commitment_vec(&self) -> Vec<u8> {
         let mut buf: Vec<u8> = vec![];
         // timeout timestep should be validated before calling this function
         let timeout_nanoseconds = self.timeout.timestamp().unwrap().nanos();

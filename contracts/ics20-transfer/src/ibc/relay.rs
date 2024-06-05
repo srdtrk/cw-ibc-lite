@@ -105,6 +105,7 @@ pub fn on_recv_packet(
     };
     state::helpers::store_recv_packet_reply_args(deps.storage, &reply_args)?;
 
+    // TODO: move to helper
     let cw20_msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: base_denom.to_string(),
         msg: cosmwasm_std::to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
