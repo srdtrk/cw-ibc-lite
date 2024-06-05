@@ -41,13 +41,15 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
       - name: Install just
         uses: extractions/setup-just@v2
       - name: Build contracts using cosmwasm/optimizer
         run: just build-optimize
 
   build-all-features:
-    name: Build with all features
+    name: Build with All Features
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -72,3 +74,29 @@ jobs:
         with:
           command: build
           args: --locked --all-features
+  build-no-default:
+    name: Build with No Default Features
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.77.2
+          override: true
+          components: rustfmt, clippy
+      - name: Run unit tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --no-default-features
+        env:
+          RUST_BACKTRACE: 1
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --no-default-features
