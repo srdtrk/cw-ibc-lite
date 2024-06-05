@@ -25,4 +25,5 @@ generate-schemas:
   cp schema/cw-ibc-lite-ics26-router.json schemas/
   echo "Generating JSON schema files for ics20-transfer..."
   cargo run --bin ics20_schema
+  cp schema/cw-ibc-lite-ics20-transfer.json schemas/
   rm -r schema
