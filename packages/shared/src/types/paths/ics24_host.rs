@@ -164,7 +164,7 @@ mod tests {
             PORT_PREFIX,
             "transfer",
             CHANNEL_PREFIX,
-            "channel-0",
+            "08-wasm-0",
             SEQUENCE_PREFIX,
             1
         );
