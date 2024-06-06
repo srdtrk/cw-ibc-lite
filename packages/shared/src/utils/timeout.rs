@@ -8,7 +8,6 @@ use crate::types::error::ContractError;
 ///
 /// # Errors
 /// Returns an error if the timeout is not a timestamp or if the timestamp is in the past.
-// TODO: We are not using the light client's height for now unlike ibc-go. Make sure this is secure.
 pub fn validate(env: &Env, timeout: &IbcTimeout) -> Result<(), ContractError> {
     if timeout.block().is_some() {
         return Err(ContractError::InvalidTimeoutHeight);

@@ -66,7 +66,7 @@ impl Packet {
         let mut buf: Vec<u8> = vec![];
         // timeout timestep should be validated before calling this function
         let timeout_nanoseconds = self.timeout.timestamp().unwrap().nanos();
-        // TODO: make sure that revision_number and revision_height can be ignored
+        // NOTE: revision_number and revision_height can be ignored
         let revision_number = 0_u64;
         let revision_height = 0_u64;
         let data_hash = sha2::Sha256::digest(self.data.as_slice());
