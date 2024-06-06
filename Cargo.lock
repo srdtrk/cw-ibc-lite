@@ -374,6 +374,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-ibc-lite-ics02-client",
  "cw-ibc-lite-shared",
+ "cw-ownable",
  "cw-storage-plus",
  "cw2",
  "ibc-client-cw",

@@ -8,7 +8,10 @@ use cw_ibc_lite_shared::types::apps::helpers::ibc_lite_app_callback;
 
 /// The message to instantiate the contract.
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    /// The contract address allowed to make IBC callbacks.
+    pub ics26_router_address: String,
+}
 
 /// The execute messages supported by the contract.
 #[ibc_lite_app_callback]
@@ -37,6 +40,52 @@ pub struct TransferMsg {
 }
 
 /// The query messages supported by the contract.
+#[cw_ownable::cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    /// The escrowed amount for the given channel and cw20 contract address.
+    #[returns(cosmwasm_std::Uint128)]
+    EscrowAmount {
+        /// The channel identifier.
+        channel: String,
+        /// The cw20 contract address.
+        cw20_address: String,
+    },
+    /// The list of all escrows for the given channel.
+    /// Returns (cw20_address, amount) pairs.
+    #[returns(responses::EscrowList)]
+    ListEscrows {
+        /// The channel identifier.
+        channel: String,
+        /// start pagination after this contract address
+        #[serde(skip_serializing_if = "Option::is_none")]
+        start_after: Option<String>,
+        /// limit results to this number
+        #[serde(skip_serializing_if = "Option::is_none")]
+        limit: Option<u32>,
+    },
+}
+
+/// Contains the query responses
+pub mod responses {
+    use cosmwasm_std::Uint128;
+
+    /// Response to [`super::QueryMsg::ListEscrows`]
+    #[super::cw_serde]
+    pub struct EscrowList {
+        /// List of escrow infos
+        pub list: Vec<EscrowInfo>,
+    }
+
+    /// Information on the escrowed amount for a given channel and cw20 address
+    #[super::cw_serde]
+    pub struct EscrowInfo {
+        /// The channel identifier of the escrowed amount
+        pub channel: String,
+        /// The address of the cw20 token contract
+        pub cw20_address: String,
+        /// Amount of funds escrowed
+        pub amount: Uint128,
+    }
+}

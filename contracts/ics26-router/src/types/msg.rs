@@ -9,6 +9,10 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 pub struct InstantiateMsg {
     /// cw-ibc-lite-ics02-client router code id
     pub ics02_client_code_id: u64,
+    /// The owner of the contract.
+    /// This address can register IBC apps with custom port IDs.
+    /// Use CosmosSDK governance module address if unsure.
+    pub owner: String,
 }
 
 /// The execute messages supported by the contract.

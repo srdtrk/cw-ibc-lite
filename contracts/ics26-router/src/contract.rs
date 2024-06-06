@@ -24,6 +24,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
     cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
 
     let ics02_code = ics02_client::helpers::Ics02ClientCode::new(msg.ics02_client_code_id);
@@ -343,7 +344,7 @@ mod execute {
     #[allow(clippy::needless_pass_by_value)]
     pub fn register_ibc_app(
         deps: DepsMut,
-        env: Env,
+        _env: Env,
         info: MessageInfo,
         port_id: Option<String>,
         contract_address: String,
@@ -351,7 +352,7 @@ mod execute {
         let contract_address = deps.api.addr_validate(&contract_address)?;
         let port_id = if let Some(port_id) = port_id {
             // NOTE: Only the admin can register an IBC app with a custom port ID.
-            state::admin::assert_admin(&env, &deps.querier, &info.sender)?;
+            cw_ownable::assert_owner(deps.storage, &info.sender)?;
             // Ensure the port ID is valid.
             let _ = identifiers::PortId::from_str(&port_id)?;
             port_id
