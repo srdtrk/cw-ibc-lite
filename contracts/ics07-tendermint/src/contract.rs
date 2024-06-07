@@ -25,7 +25,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
-    cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
+    state::owner::set(deps.storage, info.sender.as_str());
 
     let mut ctx = TendermintContext::new_mut(deps, env)?;
     let data = ctx.instantiate(msg.into())?;
@@ -45,7 +45,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    state::owner::assert(deps.storage, info.sender.as_str())?;
 
     let mut ctx = TendermintContext::new_mut(deps, env)?;
     let data = ctx.sudo(msg.into())?;
@@ -77,7 +77,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::VerifyMembership(_) | QueryMsg::VerifyNonMembership(_) => {
             query::sudo_query(deps, env, msg.try_into()?)
         }
-        QueryMsg::Ownership {} => query::ownership(deps),
+        QueryMsg::Owner {} => query::owner(deps),
     }
 }
 
@@ -88,7 +88,7 @@ mod query {
 
     use ibc_client_cw::types::{QueryMsg as TendermintQueryMsg, QueryResponse};
 
-    use super::{Binary, ContractError, Deps, Env, TendermintContext};
+    use super::{state, Binary, ContractError, Deps, Env, TendermintContext};
 
     pub fn status(deps: Deps, env: Env, msg: TendermintQueryMsg) -> Result<Binary, ContractError> {
         tendermint_query(deps, env, msg)
@@ -158,9 +158,9 @@ mod query {
         ctx.sudo(msg).map_err(ContractError::from)
     }
 
-    pub fn ownership(deps: Deps) -> Result<Binary, ContractError> {
-        Ok(cosmwasm_std::to_json_binary(&cw_ownable::get_ownership(
-            deps.storage,
-        )?)?)
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn owner(deps: Deps) -> Result<Binary, ContractError> {
+        let owner: String = state::owner::get(deps.storage)?;
+        Ok(cosmwasm_std::to_json_binary(&owner)?)
     }
 }

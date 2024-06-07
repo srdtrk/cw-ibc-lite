@@ -318,13 +318,11 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-ibc-lite-shared",
- "cw-ownable",
  "cw-storage-plus",
  "cw2",
  "ibc-client-cw",
  "ibc-client-tendermint",
  "schemars",
- "serde",
 ]
 
 [[package]]

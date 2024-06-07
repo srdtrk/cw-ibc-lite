@@ -31,7 +31,6 @@ pub enum ExecuteMsg {
 }
 
 /// Query messages supported by all light client contracts in ibc-lite
-#[cw_ownable::cw_ownable_query]
 #[derive(QueryResponses)]
 #[cw_serde]
 pub enum QueryMsg {
@@ -56,6 +55,10 @@ pub enum QueryMsg {
     /// Verify non-membership
     #[returns(ibc_client_cw::types::ContractResult)]
     VerifyNonMembership(VerifyNonMembershipMsgRaw),
+
+    /// Get the owner of the contract
+    #[returns(String)]
+    Owner {},
 }
 
 /// Contains the query responses supported by all light client contracts in ibc-lite
