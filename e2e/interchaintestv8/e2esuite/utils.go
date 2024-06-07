@@ -93,3 +93,24 @@ func (s *TestSuite) fundAddress(ctx context.Context, chain *cosmos.CosmosChain, 
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	s.Require().NoError(err)
 }
+
+// ExtractValueFromEvents extracts the value of an attribute from a list of events.
+// If the attribute is not found, the function returns an empty string and false.
+// If the attribute is found, the function returns the value and true.
+func (*TestSuite) ExtractValueFromEvents(events sdk.StringEvents, eventType, attrKey string) (string, bool) {
+	for _, event := range events {
+		if event.Type != eventType {
+			continue
+		}
+
+		for _, attr := range event.Attributes {
+			if attr.Key != attrKey {
+				continue
+			}
+
+			return attr.Value, true
+		}
+	}
+
+	return "", false
+}
