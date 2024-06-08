@@ -16,62 +16,48 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/e2esuite"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics07tendermint"
 )
 
-// TendermintTestSuite is a suite of tests that wraps the TestSuite
+// ICS07TendermintTestSuite is a suite of tests that wraps the TestSuite
 // and can provide additional functionality
-type TendermintTestSuite struct {
+type ICS07TendermintTestSuite struct {
 	e2esuite.TestSuite
+
+	// initHeader is the header that ICS-07 Tendermint contract was instantiated with
+	initHeader *cmtservice.Header
 
 	tendermintContract *ics07tendermint.Contract
 	// this line is used by go-codegen # suite/contract
 }
 
-// SetupSuite calls the underlying TendermintTestSuite's SetupSuite method
-func (s *TendermintTestSuite) SetupSuite(ctx context.Context) {
+// SetupSuite calls the underlying ICS07TendermintTestSuite's SetupSuite method
+func (s *ICS07TendermintTestSuite) SetupSuite(ctx context.Context) {
 	s.TestSuite.SetupSuite(ctx)
-}
-
-// TestWithTendermintTestSuite is the boilerplate code that allows the test suite to be run
-func TestWithTendermintTestSuite(t *testing.T) {
-	suite.Run(t, new(TendermintTestSuite))
-}
-
-// TestInstantiate is a test that demonstrates instantiating the ICS-07 Tendermint contract.
-func (s *TendermintTestSuite) TestInstantiate() {
-	ctx := context.Background()
-
-	s.SetupSuite(ctx)
 
 	wasmd1, wasmd2 := s.ChainA, s.ChainB
 
-	s.Require().True(s.Run("UploadAndInstantiateContract", func() {
-		// Compress the code as it is too large
-		code, err := types.CompressFile("../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
+	var codeID string
+	s.Require().True(s.Run("StoreCode", func() {
+		// Upload the contract to the chain
+		proposal, err := types.NewCompressedStoreCodeMsg(ctx, wasmd1, s.UserA, "../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
+		s.Require().NoError(err)
+		_, err = s.BroadcastMessages(ctx, wasmd1, s.UserA, 6_000_000, proposal)
 		s.Require().NoError(err)
 
-		_, err = s.BroadcastMessages(ctx, wasmd1, s.UserA, 10_000_000, &wasmtypes.MsgStoreCode{
-			Sender:       s.UserA.FormattedAddress(),
-			WASMByteCode: code,
-		})
+		codeResp, err := e2esuite.GRPCQuery[wasmtypes.QueryCodesResponse](ctx, wasmd1, &wasmtypes.QueryCodesRequest{})
 		s.Require().NoError(err)
+		s.Require().Len(codeResp.CodeInfos, 1)
 
-		s.Require().NoError(testutil.WaitForBlocks(ctx, 3, wasmd1))
+		codeID = fmt.Sprintf("%d", codeResp.CodeInfos[0].CodeID)
+	}))
 
-		headerResp, err := e2esuite.GRPCQuery[wasmtypes.QueryCodesResponse](ctx, wasmd1, &wasmtypes.QueryCodesRequest{})
-		s.Require().NoError(err)
-		s.Require().Len(headerResp.CodeInfos, 1)
-
-		codeID := headerResp.CodeInfos[0].CodeID
-
+	s.Require().True(s.Run("InstantiateContract", func() {
 		var (
+			err          error
 			latestHeight int64
-			header       *cmtservice.Header
 		)
 		s.Require().True(s.Run("fetch header and at the latest height", func() {
 			latestHeight, err = wasmd2.Height(ctx)
@@ -82,7 +68,7 @@ func (s *TendermintTestSuite) TestInstantiate() {
 			})
 			s.Require().NoError(err)
 
-			header = &headerResp.SdkBlock.Header
+			s.initHeader = &headerResp.SdkBlock.Header
 		}))
 
 		var (
@@ -91,23 +77,23 @@ func (s *TendermintTestSuite) TestInstantiate() {
 		)
 		s.Require().True(s.Run("construct the client and consensus state", func() {
 			tmConfig := ibctesting.NewTendermintConfig()
-			revision := clienttypes.ParseChainID(header.ChainID)
-			height := clienttypes.NewHeight(revision, uint64(header.Height))
+			revision := clienttypes.ParseChainID(s.initHeader.ChainID)
+			height := clienttypes.NewHeight(revision, uint64(s.initHeader.Height))
 
 			clientState := ibctm.NewClientState(
-				header.ChainID,
+				s.initHeader.ChainID,
 				tmConfig.TrustLevel, tmConfig.TrustingPeriod, tmConfig.UnbondingPeriod, tmConfig.MaxClockDrift,
 				height, commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath,
 			)
 			clientStateBz = clienttypes.MustMarshalClientState(wasmd2.Config().EncodingConfig.Codec, clientState)
 
-			consensusState := ibctm.NewConsensusState(header.Time, commitmenttypes.NewMerkleRoot([]byte(ibctm.SentinelRoot)), header.ValidatorsHash)
+			consensusState := ibctm.NewConsensusState(s.initHeader.Time, commitmenttypes.NewMerkleRoot([]byte(ibctm.SentinelRoot)), s.initHeader.ValidatorsHash)
 			consensusStateBz = clienttypes.MustMarshalConsensusState(wasmd2.Config().EncodingConfig.Codec, consensusState)
 		}))
 
 		// Instantiate the contract using contract helpers.
 		// This will an error if the instantiate message is invalid.
-		s.tendermintContract, err = ics07tendermint.Instantiate(ctx, s.UserA.KeyName(), fmt.Sprintf("%d", codeID), "", wasmd1, ics07tendermint.InstantiateMsg{
+		s.tendermintContract, err = ics07tendermint.Instantiate(ctx, s.UserA.KeyName(), codeID, "", wasmd1, ics07tendermint.InstantiateMsg{
 			ClientState:    ics07tendermint.ToBinary(clientStateBz),
 			ConsensusState: ics07tendermint.ToBinary(consensusStateBz),
 		})
@@ -117,8 +103,20 @@ func (s *TendermintTestSuite) TestInstantiate() {
 	}))
 }
 
+// TestWithICS07TendermintTestSuite is the boilerplate code that allows the test suite to be run
+func TestWithICS07TendermintTestSuite(t *testing.T) {
+	suite.Run(t, new(ICS07TendermintTestSuite))
+}
+
+// TestInstantiate is a test that demonstrates instantiating the ICS-07 Tendermint contract.
+func (s *ICS07TendermintTestSuite) TestInstantiate() {
+	ctx := context.Background()
+
+	s.SetupSuite(ctx)
+}
+
 // TestUpdateClient is a test that demonstrates updating the ICS-07 Tendermint client.
-func (s *TendermintTestSuite) TestUpdateClient() {
+func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 	// WIP
 	ctx := context.Background()
 
