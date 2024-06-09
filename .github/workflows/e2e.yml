@@ -43,9 +43,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Install just
         uses: extractions/setup-just@v2
-      - name: Build Test Contracts with Docker
-        run: just build-test-contracts
-      - name: Build Optimized Contract
+      - name: Build All Contracts
         run: just build-optimize
       - name: Setup Go
         uses: actions/setup-go@v4
