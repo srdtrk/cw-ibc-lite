@@ -58,7 +58,7 @@ pub fn execute(
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         keys::reply::ON_RECV_PACKET_CW20_TRANSFER => {
-            reply::on_recv_packet_cw20_transfer(deps, env, msg.result)
+            reply::on_recv_packet_cw20_transfer(deps, env, msg.result, msg.payload)
         }
         _ => Err(ContractError::UnknownReplyId(msg.id)),
     }
@@ -145,7 +145,7 @@ mod execute {
         };
         let ics26_msg = ics26_contract.call(send_packet_msg)?;
 
-        // TODO: Add events
+        // TODO: Add events, maybe
         Ok(Response::new().add_message(ics26_msg))
     }
 
@@ -190,7 +190,7 @@ mod reply {
 
     use super::{ContractError, DepsMut, Env, Response};
 
-    use cosmwasm_std::SubMsgResult;
+    use cosmwasm_std::{Binary, SubMsgResult};
     use cw_ibc_lite_shared::types::transfer::packet::Ics20Ack;
 
     /// Handles the reply to
@@ -201,13 +201,14 @@ mod reply {
         deps: DepsMut,
         _env: Env,
         result: SubMsgResult,
+        payload: Binary,
     ) -> Result<Response, ContractError> {
         match result {
             SubMsgResult::Ok(_) => {
                 unreachable!("unexpected response on `SubMsg::reply_on_err`")
             }
             SubMsgResult::Err(err) => {
-                let reply_args = state::helpers::load_recv_packet_reply_args(deps.storage)?;
+                let reply_args: state::RecvPacketReplyPayload = cosmwasm_std::from_json(payload)?;
                 // undo the escrow reduction
                 ESCROW.update(
                     deps.storage,

@@ -1,7 +1,6 @@
 //! This module defines the state storage of the Contract.
 
 use cosmwasm_std::Addr;
-use cw_ibc_lite_shared::types::ibc;
 
 use cw_storage_plus::{Item, Map};
 
@@ -16,10 +15,6 @@ pub const IBC_APPS: Map<&str, Addr> = Map::new("ibc_apps");
 
 /// The item for storing the ics02-client router contract address.
 pub const ICS02_CLIENT_ADDRESS: Item<Addr> = Item::new("ics02_client_address");
-
-/// The item for storing [`ibc::Packet`] to the temporary store for replies.
-// TODO: remove this in CosmWasm v2 since it introduces the ability to add custom data to reply.
-pub const PACKET_TEMP_STORE: Item<ibc::Packet> = Item::new("recv_packet_temp_store");
 
 /// Contains state storage helpers.
 pub mod helpers {
@@ -149,34 +144,5 @@ pub mod helpers {
 
         item.save(storage, &ack.to_commitment_bytes());
         Ok(())
-    }
-
-    /// Saves the packet to [`super::PACKET_TEMP_STORE`].
-    ///
-    /// # Errors
-    /// Returns an error if the packet has already been committed.
-    pub fn save_packet_temp_store(
-        storage: &mut dyn Storage,
-        packet: &ibc::Packet,
-    ) -> Result<(), ContractError> {
-        if super::PACKET_TEMP_STORE.exists(storage) {
-            return Err(ContractError::packet_already_commited(
-                super::PACKET_TEMP_STORE.as_slice().to_vec(),
-            ));
-        }
-
-        Ok(super::PACKET_TEMP_STORE.save(storage, packet)?)
-    }
-
-    /// Loads and removes the packet from the temporary store for the reply to
-    ///
-    /// # Errors
-    /// Returns an error if the packet identifier cannot be loaded.
-    pub fn remove_packet_temp_store(
-        storage: &mut dyn Storage,
-    ) -> Result<ibc::Packet, ContractError> {
-        let packet = super::PACKET_TEMP_STORE.load(storage)?;
-        super::PACKET_TEMP_STORE.remove(storage);
-        Ok(packet)
     }
 }

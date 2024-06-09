@@ -28,29 +28,29 @@ rpath = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-schema = "1.5.5"
-cosmwasm-std = { version = "1.5.5", features = [
+cosmwasm-schema = "2.0"
+cosmwasm-std = { version = "2.0", features = [
   # Enable this if you only deploy to chains that have CosmWasm 1.4 or higher
-  "cosmwasm_1_4",
+  "cosmwasm_2_0",
   "stargate",
 ] }
-cw-storage-plus = "1.2.0"
-cw2 = "1.1.2"
-cw20 = "1.1.2"
-cw20-ics20 = "1.1.2"
+cw-storage-plus = "2.0"
+cw2 = "2.0"
+cw20 = "2.0"
 schemars = "0.8.16"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
-cw-ownable = "0.5.1"
-ibc-core-host = { version = "0.53.0", default-features = false, features = ["schema"] }
-ibc-client-cw = { version = "0.53.0", default-features = false }
-ibc-client-tendermint = { version = "0.53.0", default-features = false, features = ["schema"] }
+# TODO: Remove this once cw-ownable is published with cw-plus-plus
+cw-ownable = { git = "https://github.com/CyberHoward/cw-plus-plus", branch = "bump/cosmwasm-2.0" }
+ibc-core-host = { git = "https://github.com/cosmos/ibc-rs", rev = "1ca03717ab074da605ace9ad75247dfa8fb03f86", default-features = false, features = ["schema"] }
+ibc-client-cw = { git = "https://github.com/cosmos/ibc-rs", rev = "1ca03717ab074da605ace9ad75247dfa8fb03f86", default-features = false }
+ibc-client-tendermint = { git = "https://github.com/cosmos/ibc-rs", rev = "1ca03717ab074da605ace9ad75247dfa8fb03f86", default-features = false, features = ["schema"] }
 cw-ibc-lite-shared = { version = "0.1.0", path = "./packages/shared/" }
 cw-ibc-lite-derive = { version = "0.1.0", path = "./packages/derive/" }
 cw-ibc-lite-ics02-client = { version = "0.1.0", path = "./contracts/ics02-client/", default-features = false }
 cw-ibc-lite-ics26-router = { version = "0.1.0", path = "./contracts/ics26-router/", default-features = false }
 sha2 = "0.10.8"
-ibc-proto = { version = "0.44.0", default-features = false }
+ibc-proto = { version = "0.45.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = [ "from", "into", "display", "try_into" ] }
 proc-macro2 = "1.0"
 quote = "1.0"
