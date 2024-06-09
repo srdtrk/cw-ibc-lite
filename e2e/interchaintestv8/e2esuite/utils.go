@@ -113,9 +113,6 @@ func (s *TestSuite) QuerySignedHeader(
 		return nil, err
 	}
 
-	s.T().Logf("stdout: %s", stdout)
-
-	// TODO: Set trusted validators, trusted height
 	result := &ibctm.Header{}
 	err = chain.Config().EncodingConfig.Codec.UnmarshalJSON(stdout, result)
 	if err != nil {

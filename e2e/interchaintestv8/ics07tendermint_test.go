@@ -13,6 +13,7 @@ import (
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 
@@ -106,6 +107,21 @@ func (s *ICS07TendermintTestSuite) TestInstantiate() {
 	ctx := context.Background()
 
 	s.SetupSuite(ctx)
+
+	s.Require().True(s.Run("VerifyClientStatus", func() {
+		statusResp, err := s.tendermintContract.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
+		s.Require().NoError(err)
+		s.Require().Equal(statusResp.Status, ibcexported.Active.String())
+
+		// if the height isn't present in the client state, this query would failed
+		_, err = s.tendermintContract.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
+			Height: ics07tendermint.Height{
+				RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				RevisionHeight: int(s.trustedHeight.RevisionHeight),
+			},
+		})
+		s.Require().NoError(err)
+	}))
 }
 
 // TestUpdateClient is a test that demonstrates updating the ICS-07 Tendermint client.
@@ -117,6 +133,21 @@ func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 	_, wasmd2 := s.ChainA, s.ChainB
 
 	s.UpdateClientContract(ctx, s.tendermintContract, wasmd2)
+
+	s.Require().True(s.Run("VerifyClientStatus", func() {
+		statusResp, err := s.tendermintContract.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
+		s.Require().NoError(err)
+		s.Require().Equal(statusResp.Status, ibcexported.Active.String())
+
+		// if the height isn't present in the client state, this query would failed
+		_, err = s.tendermintContract.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
+			Height: ics07tendermint.Height{
+				RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				RevisionHeight: int(s.trustedHeight.RevisionHeight),
+			},
+		})
+		s.Require().NoError(err)
+	}))
 }
 
 func (s *ICS07TendermintTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain) {
