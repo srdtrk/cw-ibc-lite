@@ -2,12 +2,16 @@ package e2esuite
 
 import (
 	"context"
+	"fmt"
 
 	"cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -92,4 +96,35 @@ func (*TestSuite) ExtractValueFromEvents(events sdk.StringEvents, eventType, att
 	}
 
 	return "", false
+}
+
+// QuerySignedHeader queries the signed header from the chain
+func (s *TestSuite) QuerySignedHeader(
+	ctx context.Context, chain ibc.Chain, trustedHeight clienttypes.Height,
+) (*ibctm.Header, error) {
+	cosmosChain, ok := chain.(*cosmos.CosmosChain)
+	if !ok {
+		return nil, fmt.Errorf("QueryTxsByEvents must be passed a cosmos.CosmosChain")
+	}
+
+	cmd := []string{"ibc", "client", "header"}
+	stdout, _, err := cosmosChain.GetNode().ExecQuery(ctx, cmd...)
+	if err != nil {
+		return nil, err
+	}
+
+	s.T().Logf("stdout: %s", stdout)
+
+	// TODO: Set trusted validators, trusted height
+	result := &ibctm.Header{}
+	err = chain.Config().EncodingConfig.Codec.UnmarshalJSON(stdout, result)
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: We assume that the trusted validators are the same as the current validator set
+	result.TrustedValidators = result.ValidatorSet
+	result.TrustedHeight = trustedHeight
+
+	return result, nil
 }
