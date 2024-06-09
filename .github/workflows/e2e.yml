@@ -34,31 +34,19 @@ jobs:
       matrix:
         test:
           # List your tests here
-          - TestWithBasicTestSuite/TestBasic
+          - TestWithICS07TendermintTestSuite/TestInstantiate
+          - TestWithICS07TendermintTestSuite/TestUpdateClient
     name: ${{ matrix.test }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
-      # You can build your contract here, you can either use docker or a custom cargo script:
-      # We've provided examples for both below:
-      # 
-      # - name: Build Contracts with Docker
-      #   run: |
-      #     docker run --rm -v "$(pwd)":/code \
-      #     --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
-      #     --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-      #     cosmwasm/optimizer:0.15.1
-      # - name: Install cargo-run-script
-      #   uses: actions-rs/cargo@v1
-      #   with:
-      #     command: install
-      #     args: cargo-run-script
-      # - name: Build Optimized Contract
-      #   uses: actions-rs/cargo@v1
-      #   with:
-      #     command: run-script
-      #     args: optimize
+        uses: actions/checkout@v4
+      - name: Install just
+        uses: extractions/setup-just@v2
+      - name: Build Test Contracts with Docker
+        run: just build-test-contracts
+      - name: Build Optimized Contract
+        run: just build-optimize
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
