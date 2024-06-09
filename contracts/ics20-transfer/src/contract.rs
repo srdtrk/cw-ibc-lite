@@ -145,7 +145,7 @@ mod execute {
         };
         let ics26_msg = ics26_contract.call(send_packet_msg)?;
 
-        // TODO: Add events
+        // TODO: Add events, maybe
         Ok(Response::new().add_message(ics26_msg))
     }
 

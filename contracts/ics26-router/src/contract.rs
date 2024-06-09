@@ -75,7 +75,9 @@ pub fn execute(
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         // TODO: Ensure that events are emitted for all the replies.
-        keys::reply::ON_RECV_PACKET => reply::write_acknowledgement(deps, env, msg.result),
+        keys::reply::ON_RECV_PACKET => {
+            reply::write_acknowledgement(deps, env, msg.result, msg.payload)
+        }
         _ => Err(ContractError::UnknownReplyId(msg.id)),
     }
 }
@@ -237,9 +239,9 @@ mod execute {
             .verify_membership(verify_membership_msg)?;
 
         state::helpers::set_packet_receipt(deps.storage, &packet)?;
-        state::helpers::save_packet_temp_store(deps.storage, &packet)?;
 
         let event = events::recv_packet::success(&packet);
+        let reply_payload = cosmwasm_std::to_json_binary(&packet)?;
         // NOTE: We must retreive a reply from the IBC app to set the acknowledgement.
         let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnRecvPacket {
             packet,
@@ -248,7 +250,8 @@ mod execute {
         let recv_packet_callback = SubMsg::reply_on_success(
             ibc_app_contract.call(callback_msg)?,
             keys::reply::ON_RECV_PACKET,
-        );
+        )
+        .with_payload(reply_payload);
 
         // TODO: Ensure event emission is reverted if the callback fails.
         Ok(Response::new()
@@ -371,7 +374,7 @@ mod execute {
 }
 
 mod reply {
-    use cosmwasm_std::SubMsgResult;
+    use cosmwasm_std::{Binary, SubMsgResult};
     use cw_ibc_lite_shared::types::ibc;
 
     use crate::types::events;
@@ -386,6 +389,7 @@ mod reply {
         deps: DepsMut,
         _env: Env,
         result: SubMsgResult,
+        payload: Binary,
     ) -> Result<Response, ContractError> {
         match result {
             SubMsgResult::Ok(resp) => {
@@ -394,7 +398,7 @@ mod reply {
                     .data
                     .ok_or(ContractError::RecvPacketCallbackNoResponse)?
                     .try_into()?;
-                let packet = state::helpers::remove_packet_temp_store(deps.storage)?;
+                let packet: ibc::Packet = cosmwasm_std::from_json(payload)?;
 
                 state::helpers::commit_packet_ack(deps.storage, &packet, &ack)?;
                 Ok(
