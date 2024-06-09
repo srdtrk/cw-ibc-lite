@@ -7,6 +7,14 @@ import (
 	"io"
 	"os"
 
+	ics23 "github.com/cosmos/ics23/go"
+
+	errorsmod "cosmossdk.io/errors"
+
+	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
+
+	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -51,4 +59,24 @@ func NewCompressedStoreCodeMsg(ctx context.Context, chain *cosmos.CosmosChain, w
 	}
 
 	return msgStoreCode, nil
+}
+
+// ConvertProofs converts cmtservice.ProofOps into MerkleProof
+func ConvertProofs(tmProof *cmtservice.ProofOps) (commitmenttypes.MerkleProof, error) {
+	if tmProof == nil {
+		return commitmenttypes.MerkleProof{}, errorsmod.Wrapf(commitmenttypes.ErrInvalidMerkleProof, "tendermint proof is nil")
+	}
+	// Unmarshal all proof ops to CommitmentProof
+	proofs := make([]*ics23.CommitmentProof, len(tmProof.Ops))
+	for i, op := range tmProof.Ops {
+		var p ics23.CommitmentProof
+		err := p.Unmarshal(op.Data)
+		if err != nil || p.Proof == nil {
+			return commitmenttypes.MerkleProof{}, errorsmod.Wrapf(commitmenttypes.ErrInvalidMerkleProof, "could not unmarshal proof op into CommitmentProof at index %d: %v", i, err)
+		}
+		proofs[i] = &p
+	}
+	return commitmenttypes.MerkleProof{
+		Proofs: proofs,
+	}, nil
 }

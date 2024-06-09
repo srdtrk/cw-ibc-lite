@@ -8,8 +8,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
+	sdkmath "cosmossdk.io/math"
+
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
@@ -22,6 +24,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/e2esuite"
+	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/testvalues"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics07tendermint"
 )
@@ -137,7 +140,7 @@ func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 	s.Require().True(s.Run("VerifyClientStatus", func() {
 		statusResp, err := s.tendermintContract.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
 		s.Require().NoError(err)
-		s.Require().Equal(statusResp.Status, ibcexported.Active.String())
+		s.Require().Equal(ibcexported.Active.String(), statusResp.Status)
 
 		// if the height isn't present in the client state, this query would failed
 		_, err = s.tendermintContract.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
@@ -145,6 +148,57 @@ func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 				RevisionNumber: int(s.trustedHeight.RevisionNumber),
 				RevisionHeight: int(s.trustedHeight.RevisionHeight),
 			},
+		})
+		s.Require().NoError(err)
+	}))
+}
+
+// TestVerifyMembership is a test that demonstrates verifying membership in the ICS-07 Tendermint contract.
+func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
+	ctx := context.Background()
+
+	s.SetupSuite(ctx)
+
+	_, wasmd2 := s.ChainA, s.ChainB
+
+	// We will verify the balance of s.UserB on wasmd2
+	var (
+		proofHeight int64
+		proof       []byte
+		value       []byte
+		merklePath  *commitmenttypes.MerklePath
+	)
+	s.Require().True(s.Run("CreateBankProof", func() {
+		key, err := types.GetBankBalanceKey(s.UserB.Address(), wasmd2.Config().Denom)
+		s.Require().NoError(err)
+		value, err = banktypes.BalanceValueCodec.Encode(sdkmath.NewInt(testvalues.StartingTokenAmount))
+		s.Require().NoError(err)
+
+		merklePath, err = types.ConvertToMerklePath([]byte(banktypes.StoreKey), key)
+		s.Require().NoError(err)
+
+		// Create a proof for the balance of s.UserB on wasmd2
+		proof, proofHeight, err = s.QueryProofs(ctx, wasmd2, banktypes.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
+	}))
+
+	s.Require().True(s.Run("VerifyMembership", func() {
+		_, err := s.tendermintContract.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
+			DelayBlockPeriod: 0,
+			DelayTimePeriod:  0,
+			Height: ics07tendermint.Height2{
+				RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				RevisionHeight: int(proofHeight),
+			},
+			// TODO: ibc-rs only accepts IBC paths
+			// Therefore, the test is failing
+			Path: ics07tendermint.MerklePath{
+				KeyPath: merklePath.KeyPath,
+			},
+			Proof: base64.StdEncoding.EncodeToString(proof),
+			Value: base64.StdEncoding.EncodeToString(value),
 		})
 		s.Require().NoError(err)
 	}))
@@ -173,20 +227,4 @@ func (s *ICS07TendermintTestSuite) UpdateClientContract(ctx context.Context, tmC
 
 	// NOTE: We assume that revision number does not change
 	s.trustedHeight.RevisionHeight = uint64(signedHeader.Header.Height)
-}
-
-func (s *ICS07TendermintTestSuite) FetchHeader(ctx context.Context, chain *cosmos.CosmosChain) (*cmtservice.Header, error) {
-	latestHeight, err := chain.Height(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	headerResp, err := e2esuite.GRPCQuery[cmtservice.GetBlockByHeightResponse](ctx, chain, &cmtservice.GetBlockByHeightRequest{
-		Height: latestHeight,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &headerResp.SdkBlock.Header, nil
 }

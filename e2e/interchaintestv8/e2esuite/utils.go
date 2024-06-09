@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+
+	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types"
 )
 
 // FundAddressChainA sends funds to the given address on Chain A.
@@ -100,15 +103,10 @@ func (*TestSuite) ExtractValueFromEvents(events sdk.StringEvents, eventType, att
 
 // QuerySignedHeader queries the signed header from the chain
 func (s *TestSuite) QuerySignedHeader(
-	ctx context.Context, chain ibc.Chain, trustedHeight clienttypes.Height,
+	ctx context.Context, chain *cosmos.CosmosChain, trustedHeight clienttypes.Height,
 ) (*ibctm.Header, error) {
-	cosmosChain, ok := chain.(*cosmos.CosmosChain)
-	if !ok {
-		return nil, fmt.Errorf("QueryTxsByEvents must be passed a cosmos.CosmosChain")
-	}
-
 	cmd := []string{"ibc", "client", "header"}
-	stdout, _, err := cosmosChain.GetNode().ExecQuery(ctx, cmd...)
+	stdout, _, err := chain.GetNode().ExecQuery(ctx, cmd...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,4 +122,51 @@ func (s *TestSuite) QuerySignedHeader(
 	result.TrustedHeight = trustedHeight
 
 	return result, nil
+}
+
+// QueryProofs queries the proofs from the chain for the given key
+func (s *TestSuite) QueryProofs(
+	ctx context.Context, chain *cosmos.CosmosChain,
+	storeKey string, key []byte, height int64,
+) ([]byte, int64, error) {
+	resp, err := GRPCQuery[cmtservice.ABCIQueryResponse](ctx, chain, &cmtservice.ABCIQueryRequest{
+		Path:   fmt.Sprintf("store/%s/key", storeKey),
+		Height: height - 1, // Copied from ibc-go test
+		Data:   key,
+		Prove:  true,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	merkleProof, err := types.ConvertProofs(resp.ProofOps)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	proof, err := chain.Config().EncodingConfig.Codec.Marshal(&merkleProof)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// proof height + 1 is returned as the proof created corresponds to the height the proof
+	// was created in the IAVL tree. Tendermint and subsequently the clients that rely on it
+	// have heights 1 above the IAVL tree. Thus we return proof height + 1
+	return proof, resp.Height + 1, nil
+}
+
+func (s *TestSuite) FetchHeader(ctx context.Context, chain *cosmos.CosmosChain) (*cmtservice.Header, error) {
+	latestHeight, err := chain.Height(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headerResp, err := GRPCQuery[cmtservice.GetBlockByHeightResponse](ctx, chain, &cmtservice.GetBlockByHeightRequest{
+		Height: latestHeight,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &headerResp.SdkBlock.Header, nil
 }
