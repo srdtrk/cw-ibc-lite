@@ -389,6 +389,7 @@ mod reply {
     ) -> Result<Response, ContractError> {
         match result {
             SubMsgResult::Ok(resp) => {
+                #[allow(warnings)] // TODO: remove this once we have working tests and then fix it.
                 let ack: ibc::Acknowledgement = resp
                     .data
                     .ok_or(ContractError::RecvPacketCallbackNoResponse)?

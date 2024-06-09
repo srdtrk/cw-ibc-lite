@@ -106,7 +106,7 @@ impl TryFrom<cosmwasm_std::Binary> for Acknowledgement {
     type Error = ContractError;
 
     fn try_from(data: cosmwasm_std::Binary) -> Result<Self, Self::Error> {
-        data.0.try_into()
+        Vec::from(data).try_into()
     }
 }
 

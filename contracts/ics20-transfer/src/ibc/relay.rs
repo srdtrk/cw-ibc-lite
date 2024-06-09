@@ -30,7 +30,7 @@ pub fn on_send_packet(
 ) -> Result<Response, ContractError> {
     // NOTE: We must ensure that the sender is the contract itself because the tokens were received
     // by the contract at an earlier point, on [`crate::types::msg::ExecuteMsg::Receive`].
-    if sender != env.contract.address {
+    if sender != env.contract.address.as_str() {
         return Err(ContractError::Unauthorized);
     }
     if version != keys::ICS20_VERSION {
