@@ -96,15 +96,6 @@ pub fn on_recv_packet(
         },
     )?;
 
-    // TODO: This can be removed in CosmWasm v2 since it introduces the ability to add custom data
-    // to reply.
-    let reply_args = state::RecvPacketReplyArgs {
-        channel_id: packet.destination_channel.into(),
-        denom: base_denom.to_string(),
-        amount: ics20_packet.amount,
-    };
-    state::helpers::store_recv_packet_reply_args(deps.storage, &reply_args)?;
-
     // TODO: move to helper
     let cw20_msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: base_denom.to_string(),
@@ -115,7 +106,13 @@ pub fn on_recv_packet(
         funds: vec![],
     }
     .into();
-    let cw20_submsg = SubMsg::reply_on_error(cw20_msg, keys::reply::ON_RECV_PACKET_CW20_TRANSFER);
+    let reply_args = state::RecvPacketReplyPayload {
+        channel_id: packet.destination_channel.into(),
+        denom: base_denom.to_string(),
+        amount: ics20_packet.amount,
+    };
+    let cw20_submsg = SubMsg::reply_on_error(cw20_msg, keys::reply::ON_RECV_PACKET_CW20_TRANSFER)
+        .with_payload(cosmwasm_std::to_json_binary(&reply_args)?);
 
     // NOTE: The success acknowledgement will be overwritten by the SubMsg reply in case of error.
     Ok(Response::new()
