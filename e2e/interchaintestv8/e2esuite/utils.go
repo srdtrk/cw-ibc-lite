@@ -125,10 +125,10 @@ func (s *TestSuite) QuerySignedHeader(
 }
 
 // QueryProofs queries the proofs from the chain for the given key
-func (s *TestSuite) QueryProofs(
+func (*TestSuite) QueryProofs(
 	ctx context.Context, chain *cosmos.CosmosChain,
 	storeKey string, key []byte, height int64,
-) ([]byte, int64, error) {
+) ([]byte, []byte, int64, error) {
 	resp, err := GRPCQuery[cmtservice.ABCIQueryResponse](ctx, chain, &cmtservice.ABCIQueryRequest{
 		Path:   fmt.Sprintf("store/%s/key", storeKey),
 		Height: height - 1, // Copied from ibc-go test
@@ -136,23 +136,23 @@ func (s *TestSuite) QueryProofs(
 		Prove:  true,
 	})
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 
 	merkleProof, err := types.ConvertProofs(resp.ProofOps)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 
 	proof, err := chain.Config().EncodingConfig.Codec.Marshal(&merkleProof)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 
 	// proof height + 1 is returned as the proof created corresponds to the height the proof
 	// was created in the IAVL tree. Tendermint and subsequently the clients that rely on it
 	// have heights 1 above the IAVL tree. Thus we return proof height + 1
-	return proof, resp.Height + 1, nil
+	return resp.Value, proof, resp.Height + 1, nil
 }
 
 func (s *TestSuite) FetchHeader(ctx context.Context, chain *cosmos.CosmosChain) (*cmtservice.Header, error) {

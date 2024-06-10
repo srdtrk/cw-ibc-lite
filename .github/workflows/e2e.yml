@@ -36,6 +36,7 @@ jobs:
           # List your tests here
           - TestWithICS07TendermintTestSuite/TestInstantiate
           - TestWithICS07TendermintTestSuite/TestUpdateClient
+          - TestWithICS07TendermintTestSuite/TestVerifyMembership
     name: ${{ matrix.test }}
     runs-on: ubuntu-latest
     steps:

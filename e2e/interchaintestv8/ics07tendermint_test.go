@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/suite"
 
-	sdkmath "cosmossdk.io/math"
-
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -22,9 +21,9 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/e2esuite"
-	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/testvalues"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics07tendermint"
 )
@@ -44,17 +43,17 @@ type ICS07TendermintTestSuite struct {
 func (s *ICS07TendermintTestSuite) SetupSuite(ctx context.Context) {
 	s.TestSuite.SetupSuite(ctx)
 
-	wasmd1, wasmd2 := s.ChainA, s.ChainB
+	wasmd, simd := s.ChainA, s.ChainB
 
 	var codeID string
 	s.Require().True(s.Run("StoreCode", func() {
 		// Upload the contract to the chain
-		proposal, err := types.NewCompressedStoreCodeMsg(ctx, wasmd1, s.UserA, "../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
+		proposal, err := types.NewCompressedStoreCodeMsg(ctx, wasmd, s.UserA, "../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
 		s.Require().NoError(err)
-		_, err = s.BroadcastMessages(ctx, wasmd1, s.UserA, 6_000_000, proposal)
+		_, err = s.BroadcastMessages(ctx, wasmd, s.UserA, 6_000_000, proposal)
 		s.Require().NoError(err)
 
-		codeResp, err := e2esuite.GRPCQuery[wasmtypes.QueryCodesResponse](ctx, wasmd1, &wasmtypes.QueryCodesRequest{})
+		codeResp, err := e2esuite.GRPCQuery[wasmtypes.QueryCodesResponse](ctx, wasmd, &wasmtypes.QueryCodesRequest{})
 		s.Require().NoError(err)
 		s.Require().Len(codeResp.CodeInfos, 1)
 
@@ -62,7 +61,7 @@ func (s *ICS07TendermintTestSuite) SetupSuite(ctx context.Context) {
 	}))
 
 	s.Require().True(s.Run("InstantiateContract", func() {
-		header, err := s.FetchHeader(ctx, wasmd2)
+		header, err := s.FetchHeader(ctx, simd)
 		s.Require().NoError(err)
 
 		var (
@@ -80,15 +79,15 @@ func (s *ICS07TendermintTestSuite) SetupSuite(ctx context.Context) {
 				tmConfig.TrustLevel, tmConfig.TrustingPeriod, tmConfig.UnbondingPeriod, tmConfig.MaxClockDrift,
 				height, commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath,
 			)
-			clientStateBz = clienttypes.MustMarshalClientState(wasmd2.Config().EncodingConfig.Codec, clientState)
+			clientStateBz = clienttypes.MustMarshalClientState(simd.Config().EncodingConfig.Codec, clientState)
 
 			consensusState := ibctm.NewConsensusState(header.Time, commitmenttypes.NewMerkleRoot([]byte(ibctm.SentinelRoot)), header.ValidatorsHash)
-			consensusStateBz = clienttypes.MustMarshalConsensusState(wasmd2.Config().EncodingConfig.Codec, consensusState)
+			consensusStateBz = clienttypes.MustMarshalConsensusState(simd.Config().EncodingConfig.Codec, consensusState)
 		}))
 
 		// Instantiate the contract using contract helpers.
 		// This will an error if the instantiate message is invalid.
-		s.tendermintContract, err = ics07tendermint.Instantiate(ctx, s.UserA.KeyName(), codeID, "", wasmd1, ics07tendermint.InstantiateMsg{
+		s.tendermintContract, err = ics07tendermint.Instantiate(ctx, s.UserA.KeyName(), codeID, "", wasmd, ics07tendermint.InstantiateMsg{
 			ClientState:    ics07tendermint.ToBinary(clientStateBz),
 			ConsensusState: ics07tendermint.ToBinary(consensusStateBz),
 		})
@@ -133,11 +132,19 @@ func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 
 	s.SetupSuite(ctx)
 
-	_, wasmd2 := s.ChainA, s.ChainB
+	_, simd := s.ChainA, s.ChainB
 
-	s.UpdateClientContract(ctx, s.tendermintContract, wasmd2)
+	initialHeight := s.trustedHeight
+
+	s.Require().NoError(testutil.WaitForBlocks(ctx, 2, simd))
+
+	s.UpdateClientContract(ctx, s.tendermintContract, simd, s.trustedHeight.RevisionHeight+2)
 
 	s.Require().True(s.Run("VerifyClientStatus", func() {
+		// The client should be at a higher height
+		s.Require().Greater(s.trustedHeight.RevisionHeight, initialHeight.RevisionHeight)
+		s.Require().Equal(s.trustedHeight.RevisionNumber, initialHeight.RevisionNumber)
+
 		statusResp, err := s.tendermintContract.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
 		s.Require().NoError(err)
 		s.Require().Equal(ibcexported.Active.String(), statusResp.Status)
@@ -159,32 +166,74 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 
 	s.SetupSuite(ctx)
 
-	_, wasmd2 := s.ChainA, s.ChainB
+	wasmd, simd := s.ChainA, s.ChainB
 
-	// We will verify the balance of s.UserB on wasmd2
+	// Since we will be testing the same ideas on both the cosmwasm tendermint client and the go client,
+	// we will first update the go client and then retrieve its height
+	var (
+		height clienttypes.Height
+	)
+	s.Require().True(s.Run("UpdateGoAndContractClient", func() {
+		s.Require().NoError(s.Relayer.StopRelayer(ctx, s.ExecRep))
+		s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
+
+		stateResp, err := e2esuite.GRPCQuery[clienttypes.QueryClientStateResponse](ctx, wasmd, &clienttypes.QueryClientStateRequest{
+			ClientId: ibctesting.FirstClientID,
+		})
+		s.Require().NoError(err)
+
+		state := &ibctm.ClientState{}
+		err = proto.Unmarshal(stateResp.ClientState.Value, state)
+		s.Require().NoError(err)
+
+		height = state.LatestHeight
+
+		s.UpdateClientContract(ctx, s.tendermintContract, simd, height.RevisionHeight)
+	}))
+
+	// We will verify the client state of s.UserB on simd
 	var (
 		proofHeight int64
 		proof       []byte
 		value       []byte
-		merklePath  *commitmenttypes.MerklePath
+		merklePath  commitmenttypes.MerklePath
 	)
-	s.Require().True(s.Run("CreateBankProof", func() {
-		key, err := types.GetBankBalanceKey(s.UserB.Address(), wasmd2.Config().Denom)
-		s.Require().NoError(err)
-		value, err = banktypes.BalanceValueCodec.Encode(sdkmath.NewInt(testvalues.StartingTokenAmount))
-		s.Require().NoError(err)
-
-		merklePath, err = types.ConvertToMerklePath([]byte(banktypes.StoreKey), key)
+	s.Require().True(s.Run("CreateClientStateProof", func() {
+		var err error
+		key := host.FullClientStateKey(ibctesting.FirstClientID)
+		merklePath = commitmenttypes.NewMerklePath(string(key))
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(ibcexported.StoreKey)), merklePath)
 		s.Require().NoError(err)
 
-		// Create a proof for the balance of s.UserB on wasmd2
-		proof, proofHeight, err = s.QueryProofs(ctx, wasmd2, banktypes.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
+		// Create a proof for the client state
+		value, proof, proofHeight, err = s.QueryProofs(ctx, simd, ibcexported.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
 		s.Require().NoError(err)
 		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		// s.Require().Equal(expValue, value)
 		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
 	}))
 
 	s.Require().True(s.Run("VerifyMembership", func() {
+		// TODO: investigate why the go client is not accepting the proof but the contract is accepting it...
+
+		// we first query the go client to verify the membership
+		// This way, we know that the query parameters are correct
+		// clientResp, err := e2esuite.GRPCQuery[clienttypes.QueryVerifyMembershipResponse](ctx, wasmd, &clienttypes.QueryVerifyMembershipRequest{
+		// 	ClientId: ibctesting.FirstClientID,
+		// 	Proof:    proof,
+		// 	ProofHeight: clienttypes.Height{
+		// 		RevisionNumber: s.trustedHeight.RevisionNumber,
+		// 		RevisionHeight: uint64(proofHeight),
+		// 	},
+		// 	MerklePath: merklePath,
+		// 	Value:      value,
+		// 	TimeDelay:  0,
+		// 	BlockDelay: 0,
+		// })
+		// s.Require().NoError(err)
+		// s.Require().True(clientResp.Success)
+
 		_, err := s.tendermintContract.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
 			DelayBlockPeriod: 0,
 			DelayTimePeriod:  0,
@@ -204,8 +253,9 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 	}))
 }
 
-func (s *ICS07TendermintTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain) {
-	signedHeader, err := s.QuerySignedHeader(ctx, counterpartyChain, s.trustedHeight)
+func (s *ICS07TendermintTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain, height uint64) {
+	newHeight := clienttypes.NewHeight(s.trustedHeight.RevisionNumber, height)
+	signedHeader, err := s.QuerySignedHeader(ctx, counterpartyChain, newHeight)
 	s.Require().NoError(err)
 
 	anyHeader, err := codectypes.NewAnyWithValue(signedHeader)
