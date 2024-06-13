@@ -31,12 +31,12 @@ type VerifyClientMessageRaw struct {
 }
 
 type VerifyMembershipMsgRaw struct {
-	DelayTimePeriod int `json:"delay_time_period"`
-	Height Height2 `json:"height"`
-	Path MerklePath `json:"path"`
-	Proof string `json:"proof"`
-	Value string `json:"value"`
-	DelayBlockPeriod int `json:"delay_block_period"`
+	DelayTimePeriod  int        `json:"delay_time_period"`
+	Height           Height2    `json:"height"`
+	Path             MerklePath `json:"path"`
+	Proof            string     `json:"proof"`
+	Value            string     `json:"value"`
+	DelayBlockPeriod int        `json:"delay_block_period"`
 }
 
 // The core IBC height type, which represents the height of a chain, which typically is the number of blocks since genesis (or more generally, since the last revision/hard upgrade).
@@ -48,7 +48,7 @@ type Height struct {
 }
 
 // The response to [`super::QueryMsg::QueryClient`].
-type QueryClient struct {
+type QueryClient_2 struct {
 	// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::Status`].
 	Status *QueryClient_Status `json:"status,omitempty"`
 	// The response to [`cw_ibc_lite_shared::types::clients::msg::QueryMsg::ExportMetadata`].
@@ -89,7 +89,7 @@ type ExecuteMsg_CreateClient struct {
 	// The optional counterparty info. If provided, the client will be provided with the counterparty. If not provided, the counterparty must be provided later using the `ProvideCounterparty` message.
 	CounterpartyInfo *CounterpartyInfo `json:"counterparty_info,omitempty"`
 	// Instantiate message for the light client contract.
-	InstantiateMsg InstantiateMsg `json:"instantiate_msg"`
+	InstantiateMsg InstantiateMsg_2 `json:"instantiate_msg"`
 }
 
 type ExportMetadataMsg struct{}
@@ -98,7 +98,7 @@ type QueryMsg_QueryClient struct {
 	// The client id of the client to execute the query on.
 	ClientId string `json:"client_id"`
 	// The query to execute on the client.
-	Query QueryMsg `json:"query"`
+	Query QueryMsg_2 `json:"query"`
 }
 
 // Counterparty client information.
@@ -110,11 +110,11 @@ type CounterpartyInfo struct {
 }
 
 type VerifyNonMembershipMsgRaw struct {
-	DelayBlockPeriod int `json:"delay_block_period"`
-	DelayTimePeriod int `json:"delay_time_period"`
-	Height Height2 `json:"height"`
-	Path MerklePath `json:"path"`
-	Proof string `json:"proof"`
+	DelayBlockPeriod int        `json:"delay_block_period"`
+	DelayTimePeriod  int        `json:"delay_time_period"`
+	Height           Height2    `json:"height"`
+	Path             MerklePath `json:"path"`
+	Proof            string     `json:"proof"`
 }
 
 /*
@@ -130,15 +130,15 @@ type Height2 struct {
 }
 
 type GenesisMetadata struct {
-	Key []int `json:"key"`
+	Key   []int `json:"key"`
 	Value []int `json:"value"`
 }
 
 type VerifyUpgradeAndUpdateStateMsgRaw struct {
-	ProofUpgradeClient string `json:"proof_upgrade_client"`
+	ProofUpgradeClient         string `json:"proof_upgrade_client"`
 	ProofUpgradeConsensusState string `json:"proof_upgrade_consensus_state"`
-	UpgradeClientState string `json:"upgrade_client_state"`
-	UpgradeConsensusState string `json:"upgrade_consensus_state"`
+	UpgradeClientState         string `json:"upgrade_client_state"`
+	UpgradeConsensusState      string `json:"upgrade_consensus_state"`
 }
 
 type ExecuteMsg_ProvideCounterparty struct {
@@ -186,7 +186,7 @@ type CheckForMisbehaviour struct {
 }
 
 // Execute messages supported by all light client contracts in ibc-lite
-type ExecuteMsg struct {
+type ExecuteMsg_2 struct {
 	// Update the client state
 	UpdateState *ExecuteMsg_UpdateState `json:"update_state,omitempty"`
 	// Update the client state on misbehaviour
@@ -203,7 +203,7 @@ type ExecuteMsg_ExecuteClient struct {
 	// The client id of the client to execute the message on.
 	ClientId string `json:"client_id"`
 	// The message to execute on the client.
-	Message ExecuteMsg `json:"message"`
+	Message ExecuteMsg_2 `json:"message"`
 }
 
 type MerklePath struct {
@@ -222,7 +222,7 @@ This is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8
 type Binary string
 
 // Query messages supported by all light client contracts in ibc-lite
-type QueryMsg struct {
+type QueryMsg_2 struct {
 	// Get the status of the client
 	Status *QueryMsg_Status `json:"status,omitempty"`
 	// Export the metadata
@@ -260,7 +260,7 @@ type ClientInfo struct {
 }
 
 // Instantiate message for all light client contracts in ibc-lite
-type InstantiateMsg struct {
+type InstantiateMsg_2 struct {
 	// The initial client state.
 	ClientState Binary `json:"client_state"`
 	// The initial consensus state.

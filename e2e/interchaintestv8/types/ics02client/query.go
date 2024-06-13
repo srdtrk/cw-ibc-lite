@@ -18,7 +18,7 @@ type QueryClient interface {
 	// Counterparty is the client API for the QueryMsg_Counterparty query message
 	Counterparty(ctx context.Context, req *QueryMsg_Counterparty, opts ...grpc.CallOption) (*CounterpartyInfo_2, error)
 	// QueryClient is the client API for the QueryMsg_QueryClient query message
-	QueryClient(ctx context.Context, req *QueryMsg_QueryClient, opts ...grpc.CallOption) (*QueryClient, error)
+	QueryClient(ctx context.Context, req *QueryMsg_QueryClient, opts ...grpc.CallOption) (*QueryClient_2, error)
 }
 
 type queryClient struct {
@@ -103,7 +103,7 @@ func (q *queryClient) Counterparty(ctx context.Context, req *QueryMsg_Counterpar
 	return &response, nil
 }
 
-func (q *queryClient) QueryClient(ctx context.Context, req *QueryMsg_QueryClient, opts ...grpc.CallOption) (*QueryClient, error) {
+func (q *queryClient) QueryClient(ctx context.Context, req *QueryMsg_QueryClient, opts ...grpc.CallOption) (*QueryClient_2, error) {
 	rawQueryData, err := json.Marshal(&QueryMsg{QueryClient: req})
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (q *queryClient) QueryClient(ctx context.Context, req *QueryMsg_QueryClient
 		return nil, err
 	}
 
-	var response QueryClient
+	var response QueryClient_2
 	if err := json.Unmarshal(rawResponseData, &response); err != nil {
 		return nil, err
 	}
