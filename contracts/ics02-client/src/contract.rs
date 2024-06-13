@@ -40,8 +40,6 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
-
     match msg {
         ExecuteMsg::CreateClient {
             code_id,
