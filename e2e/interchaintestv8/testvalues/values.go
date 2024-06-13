@@ -5,6 +5,9 @@ import "time"
 const (
 	// StartingTokenAmount is the amount of tokens to give to each user at the start of the test.
 	StartingTokenAmount int64 = 10_000_000_000
+
+	// RelayerKeyName is the key name of the relayer wallet
+	RelayerKeyName = "relayer"
 )
 
 var (
