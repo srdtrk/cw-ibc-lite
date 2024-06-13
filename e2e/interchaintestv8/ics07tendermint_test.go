@@ -34,7 +34,7 @@ type ICS07TendermintTestSuite struct {
 
 	trustedHeight clienttypes.Height
 
-	tendermintContract *ics07tendermint.Contract
+	ics07Tendermint *ics07tendermint.Contract
 	// this line is used by go-codegen # suite/contract
 }
 
@@ -47,9 +47,9 @@ func (s *ICS07TendermintTestSuite) SetupSuite(ctx context.Context) {
 	var codeID string
 	s.Require().True(s.Run("StoreCode", func() {
 		// Upload the contract to the chain
-		proposal, err := types.NewCompressedStoreCodeMsg(ctx, wasmd, s.UserA, "../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
+		msg, err := types.NewCompressedStoreCodeMsg(ctx, wasmd, s.UserA, "../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
 		s.Require().NoError(err)
-		_, err = s.BroadcastMessages(ctx, wasmd, s.UserA, 6_000_000, proposal)
+		_, err = s.BroadcastMessages(ctx, wasmd, s.UserA, 6_000_000, msg)
 		s.Require().NoError(err)
 
 		codeResp, err := e2esuite.GRPCQuery[wasmtypes.QueryCodesResponse](ctx, wasmd, &wasmtypes.QueryCodesRequest{})
@@ -86,12 +86,12 @@ func (s *ICS07TendermintTestSuite) SetupSuite(ctx context.Context) {
 
 		// Instantiate the contract using contract helpers.
 		// This will an error if the instantiate message is invalid.
-		s.tendermintContract, err = ics07tendermint.Instantiate(ctx, s.UserA.KeyName(), codeID, "", wasmd, ics07tendermint.InstantiateMsg{
+		s.ics07Tendermint, err = ics07tendermint.Instantiate(ctx, s.UserA.KeyName(), codeID, "", wasmd, ics07tendermint.InstantiateMsg{
 			ClientState:    ics07tendermint.ToBinary(clientStateBz),
 			ConsensusState: ics07tendermint.ToBinary(consensusStateBz),
 		})
 		s.Require().NoError(err)
-		s.Require().NotEmpty(s.tendermintContract.Address)
+		s.Require().NotEmpty(s.ics07Tendermint.Address)
 
 		// Set the trusted height to the height of the header
 		s.trustedHeight = height
@@ -110,12 +110,12 @@ func (s *ICS07TendermintTestSuite) TestInstantiate() {
 	s.SetupSuite(ctx)
 
 	s.Require().True(s.Run("VerifyClientStatus", func() {
-		statusResp, err := s.tendermintContract.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
+		statusResp, err := s.ics07Tendermint.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
 		s.Require().NoError(err)
 		s.Require().Equal(statusResp.Status, ibcexported.Active.String())
 
 		// if the height isn't present in the client state, this query would failed
-		_, err = s.tendermintContract.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
+		_, err = s.ics07Tendermint.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
 			Height: ics07tendermint.Height{
 				RevisionNumber: int(s.trustedHeight.RevisionNumber),
 				RevisionHeight: int(s.trustedHeight.RevisionHeight),
@@ -137,19 +137,19 @@ func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 
 	s.Require().NoError(testutil.WaitForBlocks(ctx, 2, simd))
 
-	s.UpdateClientContract(ctx, s.tendermintContract, simd)
+	s.UpdateClientContract(ctx, s.ics07Tendermint, simd)
 
 	s.Require().True(s.Run("VerifyClientStatus", func() {
 		// The client should be at a higher height
 		s.Require().Greater(s.trustedHeight.RevisionHeight, initialHeight.RevisionHeight)
 		s.Require().Equal(s.trustedHeight.RevisionNumber, initialHeight.RevisionNumber)
 
-		statusResp, err := s.tendermintContract.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
+		statusResp, err := s.ics07Tendermint.QueryClient().Status(ctx, &ics07tendermint.QueryMsg_Status{})
 		s.Require().NoError(err)
 		s.Require().Equal(ibcexported.Active.String(), statusResp.Status)
 
 		// if the height isn't present in the client state, this query would failed
-		_, err = s.tendermintContract.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
+		_, err = s.ics07Tendermint.QueryClient().TimestampAtHeight(ctx, &ics07tendermint.QueryMsg_TimestampAtHeight{
 			Height: ics07tendermint.Height{
 				RevisionNumber: int(s.trustedHeight.RevisionNumber),
 				RevisionHeight: int(s.trustedHeight.RevisionHeight),
@@ -175,7 +175,7 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 		merklePath  commitmenttypes.MerklePath
 	)
 	s.Require().True(s.Run("CreateClientStateProof", func() {
-		s.UpdateClientContract(ctx, s.tendermintContract, simd)
+		s.UpdateClientContract(ctx, s.ics07Tendermint, simd)
 
 		var err error
 		key := host.FullClientStateKey(ibctesting.FirstClientID)
@@ -193,7 +193,7 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 	}))
 
 	s.Require().True(s.Run("VerifyMembership", func() {
-		_, err := s.tendermintContract.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
+		_, err := s.ics07Tendermint.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
 			DelayBlockPeriod: 0,
 			DelayTimePeriod:  0,
 			Height: ics07tendermint.Height2{
@@ -210,7 +210,7 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 
 		// Ensure that proof verification fails if the proof is incorrect
 		incorrectValue := []byte("incorrect value")
-		_, err = s.tendermintContract.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
+		_, err = s.ics07Tendermint.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
 			DelayBlockPeriod: 0,
 			DelayTimePeriod:  0,
 			Height: ics07tendermint.Height2{
