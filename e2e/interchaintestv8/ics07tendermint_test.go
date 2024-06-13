@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/suite"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -138,7 +137,7 @@ func (s *ICS07TendermintTestSuite) TestUpdateClient() {
 
 	s.Require().NoError(testutil.WaitForBlocks(ctx, 2, simd))
 
-	s.UpdateClientContract(ctx, s.tendermintContract, simd, s.trustedHeight.RevisionHeight+2)
+	s.UpdateClientContract(ctx, s.tendermintContract, simd)
 
 	s.Require().True(s.Run("VerifyClientStatus", func() {
 		// The client should be at a higher height
@@ -166,30 +165,7 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 
 	s.SetupSuite(ctx)
 
-	wasmd, simd := s.ChainA, s.ChainB
-
-	// Since we will be testing the same ideas on both the cosmwasm tendermint client and the go client,
-	// we will first update the go client and then retrieve its height
-	var (
-		height clienttypes.Height
-	)
-	s.Require().True(s.Run("UpdateGoAndContractClient", func() {
-		s.Require().NoError(s.Relayer.StopRelayer(ctx, s.ExecRep))
-		s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
-
-		stateResp, err := e2esuite.GRPCQuery[clienttypes.QueryClientStateResponse](ctx, wasmd, &clienttypes.QueryClientStateRequest{
-			ClientId: ibctesting.FirstClientID,
-		})
-		s.Require().NoError(err)
-
-		state := &ibctm.ClientState{}
-		err = proto.Unmarshal(stateResp.ClientState.Value, state)
-		s.Require().NoError(err)
-
-		height = state.LatestHeight
-
-		s.UpdateClientContract(ctx, s.tendermintContract, simd, height.RevisionHeight)
-	}))
+	_, simd := s.ChainA, s.ChainB
 
 	// We will verify the client state of s.UserB on simd
 	var (
@@ -199,6 +175,8 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 		merklePath  commitmenttypes.MerklePath
 	)
 	s.Require().True(s.Run("CreateClientStateProof", func() {
+		s.UpdateClientContract(ctx, s.tendermintContract, simd)
+
 		var err error
 		key := host.FullClientStateKey(ibctesting.FirstClientID)
 		merklePath = commitmenttypes.NewMerklePath(string(key))
@@ -215,25 +193,6 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 	}))
 
 	s.Require().True(s.Run("VerifyMembership", func() {
-		// TODO: investigate why the go client is not accepting the proof but the contract is accepting it...
-
-		// we first query the go client to verify the membership
-		// This way, we know that the query parameters are correct
-		// clientResp, err := e2esuite.GRPCQuery[clienttypes.QueryVerifyMembershipResponse](ctx, wasmd, &clienttypes.QueryVerifyMembershipRequest{
-		// 	ClientId: ibctesting.FirstClientID,
-		// 	Proof:    proof,
-		// 	ProofHeight: clienttypes.Height{
-		// 		RevisionNumber: s.trustedHeight.RevisionNumber,
-		// 		RevisionHeight: uint64(proofHeight),
-		// 	},
-		// 	MerklePath: merklePath,
-		// 	Value:      value,
-		// 	TimeDelay:  0,
-		// 	BlockDelay: 0,
-		// })
-		// s.Require().NoError(err)
-		// s.Require().True(clientResp.Success)
-
 		_, err := s.tendermintContract.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
 			DelayBlockPeriod: 0,
 			DelayTimePeriod:  0,
@@ -241,8 +200,6 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 				RevisionNumber: int(s.trustedHeight.RevisionNumber),
 				RevisionHeight: int(proofHeight),
 			},
-			// TODO: ibc-rs only accepts IBC paths
-			// Therefore, the test is failing
 			Path: ics07tendermint.MerklePath{
 				KeyPath: merklePath.KeyPath,
 			},
@@ -250,12 +207,28 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 			Value: base64.StdEncoding.EncodeToString(value),
 		})
 		s.Require().NoError(err)
+
+		// Ensure that proof verification fails if the proof is incorrect
+		incorrectValue := []byte("incorrect value")
+		_, err = s.tendermintContract.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
+			DelayBlockPeriod: 0,
+			DelayTimePeriod:  0,
+			Height: ics07tendermint.Height2{
+				RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				RevisionHeight: int(proofHeight),
+			},
+			Path: ics07tendermint.MerklePath{
+				KeyPath: merklePath.KeyPath,
+			},
+			Proof: base64.StdEncoding.EncodeToString(proof),
+			Value: base64.StdEncoding.EncodeToString(incorrectValue),
+		})
+		s.Require().Error(err)
 	}))
 }
 
-func (s *ICS07TendermintTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain, height uint64) {
-	newHeight := clienttypes.NewHeight(s.trustedHeight.RevisionNumber, height)
-	signedHeader, err := s.QuerySignedHeader(ctx, counterpartyChain, newHeight)
+func (s *ICS07TendermintTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain) {
+	signedHeader, err := s.QuerySignedHeader(ctx, counterpartyChain, s.trustedHeight)
 	s.Require().NoError(err)
 
 	anyHeader, err := codectypes.NewAnyWithValue(signedHeader)
