@@ -30,7 +30,7 @@ var DefaultChainSpecs = []*interchaintest.ChainSpec{
 			NoHostMount:    false,
 		},
 	},
-	// -- IBC-Go --
+	// -- IBC-Go with IBC-lite --
 	{
 		ChainConfig: ibc.ChainConfig{
 			Type:    "cosmos",
@@ -39,7 +39,7 @@ var DefaultChainSpecs = []*interchaintest.ChainSpec{
 			Images: []ibc.DockerImage{
 				{
 					Repository: "ghcr.io/cosmos/ibc-go-simd", // FOR LOCAL IMAGE USE: Docker Image Name
-					Version:    "v8.3.0",                     // FOR LOCAL IMAGE USE: Docker Image Tag
+					Version:    "pr-6299",                    // FOR LOCAL IMAGE USE: Docker Image Tag
 					UidGid:     "1025:1025",
 				},
 			},
