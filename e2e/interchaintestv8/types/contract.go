@@ -100,6 +100,22 @@ func (c *Contract[I, E, Q, QC]) Query(ctx context.Context, queryMsg Q, resp any)
 	return nil
 }
 
+// AccAddress returns the sdk.AccAddress for the contract
+func (c *Contract[I, E, Q, QC]) AccAddress() (sdk.AccAddress, error) {
+	sdk.GetConfig().SetBech32PrefixForAccount(c.Chain.Config().Bech32Prefix, c.Chain.Config().Bech32Prefix+sdk.PrefixPublic)
+	sdk.GetConfig().SetBech32PrefixForValidator(
+		c.Chain.Config().Bech32Prefix+sdk.PrefixValidator+sdk.PrefixOperator,
+		c.Chain.Config().Bech32Prefix+sdk.PrefixValidator+sdk.PrefixOperator+sdk.PrefixPublic,
+	)
+
+	contractAddr, err := sdk.AccAddressFromBech32(c.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	return contractAddr, nil
+}
+
 // this line is used by go-codegen # contract/dir
 
 // toString converts the message to a string using json

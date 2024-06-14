@@ -37,6 +37,7 @@ jobs:
           - TestWithICS07TendermintTestSuite/TestInstantiate
           - TestWithICS07TendermintTestSuite/TestUpdateClient
           - TestWithICS07TendermintTestSuite/TestVerifyMembership
+          - TestWithIBCLiteTestSuite/TestWasmProofs
     name: ${{ matrix.test }}
     runs-on: ubuntu-latest
     steps:

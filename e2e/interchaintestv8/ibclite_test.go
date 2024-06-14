@@ -206,9 +206,9 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		_, err := s.BroadcastMessages(ctx, simd, simdRelayerUser, 200_000, &clienttypes.MsgProvideCounterparty{
 			ClientId:       ibctesting.FirstClientID,
 			CounterpartyId: "08-wasm-0",
-			MerklePathPrefix: &commitmenttypes.MerklePath{
+			MerklePathPrefix: &commitmenttypes.MerklePrefix{
 				// TODO: use wasm path!
-				KeyPath: []string{ibcexported.StoreKey},
+				KeyPrefix: []byte(ibcexported.StoreKey),
 			},
 			Signer: simdRelayerUser.FormattedAddress(),
 		})
@@ -221,11 +221,49 @@ func TestWithIBCLiteTestSuite(t *testing.T) {
 	suite.Run(t, new(IBCLiteTestSuite))
 }
 
-func (s *IBCLiteTestSuite) TestIBCLite() {
+// TestIBCLiteSetup tests the setup of the IBC Lite test suite
+// TODO: remove this once there are actual tests
+func (s *IBCLiteTestSuite) TestIBCLiteSetup() {
+	ctx := context.Background()
+	s.SetupSuite(ctx)
+}
+
+// This is a test to verify that go clients can prove the state of cosmwasm contracts
+// WIP
+func (s *IBCLiteTestSuite) TestWasmProofs() {
 	ctx := context.Background()
 	s.SetupSuite(ctx)
 
-	// wasmd, _ := s.ChainA, s.ChainB
+	wasmd, _ := s.ChainA, s.ChainB
+
+	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
+
+	// During the setup, we have already committed some state into some contracts.
+	// Our goal is to prove the ICS02_CLIENT_ADDRESS state in ics26Router contract
+	var (
+		proofHeight int64
+		proof       []byte
+		value       []byte
+		// merklePath  commitmenttypes.MerklePath
+	)
+	s.Require().True(s.Run("Generate wasm proof", func() {
+		contractAddr, err := s.ics26Router.AccAddress()
+		s.Require().NoError(err)
+
+		prefixStoreKey := wasmtypes.GetContractStorePrefix(contractAddr)
+		ics02AddrKey := "ics02_client_address"
+		key := cloneAppend(prefixStoreKey, []byte(ics02AddrKey))
+
+		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
+		s.Require().Equal(value, []byte(`"`+s.ics02Client.Address+`"`))
+	}))
+
+	// TODO: Can't finish this test because ibc-go does not have a way to verify proofs in wasm path:
+	// https://github.com/cosmos/ibc-go/issues/6496
 }
 
 func (s *IBCLiteTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain) {
@@ -251,4 +289,11 @@ func (s *IBCLiteTestSuite) UpdateClientContract(ctx context.Context, tmContract 
 
 	// NOTE: We assume that revision number does not change
 	s.trustedHeight.RevisionHeight = uint64(signedHeader.Header.Height)
+}
+
+func cloneAppend(bz []byte, tail []byte) (res []byte) {
+	res = make([]byte, len(bz)+len(tail))
+	copy(res, bz)
+	copy(res[len(bz):], tail)
+	return
 }
