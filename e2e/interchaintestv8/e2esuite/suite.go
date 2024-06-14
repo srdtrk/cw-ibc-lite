@@ -75,7 +75,7 @@ func (s *TestSuite) SetupSuite(ctx context.Context) {
 	ic := interchaintest.NewInterchain().
 		AddChain(s.ChainA).
 		AddChain(s.ChainB).
-		AddRelayer(s.Relayer, testvalues.RelayerKeyName).
+		AddRelayer(s.Relayer, "relayer").
 		AddLink(interchaintest.InterchainLink{
 			Chain1:  s.ChainA,
 			Chain2:  s.ChainB,
