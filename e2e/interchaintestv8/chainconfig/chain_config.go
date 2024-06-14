@@ -38,8 +38,8 @@ var DefaultChainSpecs = []*interchaintest.ChainSpec{
 			ChainID: "simd-1",
 			Images: []ibc.DockerImage{
 				{
-					Repository: "ghcr.io/cosmos/ibc-go-simd", // FOR LOCAL IMAGE USE: Docker Image Name
-					Version:    "ibc-lite",                   // FOR LOCAL IMAGE USE: Docker Image Tag
+					Repository: "ghcr.io/cosmos/ibc-go-simd",   // FOR LOCAL IMAGE USE: Docker Image Name
+					Version:    "serdar-xxx-lite-bytes-prefix", // FOR LOCAL IMAGE USE: Docker Image Tag
 					UidGid:     "1025:1025",
 				},
 			},
