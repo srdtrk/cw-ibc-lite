@@ -178,6 +178,21 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		})
 		s.Require().NoError(err)
 	}))
+
+	s.Require().True(s.Run("Register counterparty for go client", func() {
+		_, simdRelayerUser := s.GetRelayerUsers(ctx)
+
+		_, err := s.BroadcastMessages(ctx, simd, simdRelayerUser, 200_000, &clienttypes.MsgProvideCounterparty{
+			ClientId:       ibctesting.FirstClientID,
+			CounterpartyId: "08-wasm-0",
+			MerklePathPrefix: &commitmenttypes.MerklePath{
+				// TODO: use wasm path!
+				KeyPath: []string{ibcexported.StoreKey},
+			},
+			Signer: simdRelayerUser.FormattedAddress(),
+		})
+		s.Require().NoError(err)
+	}))
 }
 
 // TestWithICS07TendermintTestSuite is the boilerplate code that allows the test suite to be run

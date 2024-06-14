@@ -14,8 +14,8 @@ var DefaultChainSpecs = []*interchaintest.ChainSpec{
 			ChainID: "wasmd-1",
 			Images: []ibc.DockerImage{
 				{
-					Repository: "srdtrk/wasmd",      // FOR LOCAL IMAGE USE: Docker Image Name
-					Version:    "v0.51-ibc-go-v8.3", // FOR LOCAL IMAGE USE: Docker Image Tag
+					Repository: "cosmwasm/wasmd", // FOR LOCAL IMAGE USE: Docker Image Name
+					Version:    "v0.51.0",        // FOR LOCAL IMAGE USE: Docker Image Tag
 					UidGid:     "1025:1025",
 				},
 			},
@@ -39,7 +39,7 @@ var DefaultChainSpecs = []*interchaintest.ChainSpec{
 			Images: []ibc.DockerImage{
 				{
 					Repository: "ghcr.io/cosmos/ibc-go-simd", // FOR LOCAL IMAGE USE: Docker Image Name
-					Version:    "pr-6299",                    // FOR LOCAL IMAGE USE: Docker Image Tag
+					Version:    "ibc-lite",                   // FOR LOCAL IMAGE USE: Docker Image Tag
 					UidGid:     "1025:1025",
 				},
 			},

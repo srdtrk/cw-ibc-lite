@@ -18,6 +18,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 
+	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/testvalues"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types"
 )
 
@@ -169,4 +170,20 @@ func (s *TestSuite) FetchHeader(ctx context.Context, chain *cosmos.CosmosChain) 
 	}
 
 	return &headerResp.SdkBlock.Header, nil
+}
+
+// GetRelayerUsers returns two ibc.Wallet instances which can be used for the relayer users
+// on the two chains.
+func (s *TestSuite) GetRelayerUsers(ctx context.Context) (ibc.Wallet, ibc.Wallet) {
+	chainA, chainB := s.ChainA, s.ChainB
+	chainAAccountBytes, err := chainA.GetAddress(ctx, testvalues.ChainARelayerName)
+	s.Require().NoError(err)
+
+	chainBAccountBytes, err := chainB.GetAddress(ctx, testvalues.ChainBRelayerName)
+	s.Require().NoError(err)
+
+	chainARelayerUser := cosmos.NewWallet(testvalues.ChainARelayerName, chainAAccountBytes, "", chainA.Config())
+	chainBRelayerUser := cosmos.NewWallet(testvalues.ChainBRelayerName, chainBAccountBytes, "", chainB.Config())
+
+	return chainARelayerUser, chainBRelayerUser
 }

@@ -134,6 +134,21 @@ func (s *TestSuite) SetupSuite(ctx context.Context) {
 	simdConnection := connections[0]
 	s.Require().NotEqual(ibcexported.LocalhostConnectionID, simdConnection.ID)
 
+	s.True(s.Run("RecoverRelayerWallets", func() {
+		// This allows the testsuite user to sign transactions with the relayer wallets
+		chainARelayerWallet, ok := s.Relayer.GetWallet(s.ChainA.Config().ChainID)
+		s.Require().True(ok)
+		s.Require().NotEmpty(chainARelayerWallet.Mnemonic())
+		err = s.ChainA.RecoverKey(ctx, testvalues.ChainARelayerName, chainARelayerWallet.Mnemonic())
+		s.Require().NoError(err)
+
+		chainBRelayerWallet, ok := s.Relayer.GetWallet(s.ChainB.Config().ChainID)
+		s.Require().True(ok)
+		s.Require().NotEmpty(chainBRelayerWallet.Mnemonic())
+		err = s.ChainB.RecoverKey(ctx, testvalues.ChainBRelayerName, chainBRelayerWallet.Mnemonic())
+		s.Require().NoError(err)
+	}))
+
 	// Start the relayer and set the cleanup function.
 	err = s.Relayer.StartRelayer(ctx, s.ExecRep, s.PathName)
 	s.Require().NoError(err)
