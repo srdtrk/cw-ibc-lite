@@ -26,6 +26,7 @@ import (
 
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/e2esuite"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/testvalues"
+	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/cw20base"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics02client"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics07tendermint"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics20transfer"
@@ -37,6 +38,9 @@ import (
 type IBCLiteTestSuite struct {
 	e2esuite.TestSuite
 
+	// cw20Base is the cw20 base contract for the tokens to be transferred
+	cw20Base *cw20base.Contract
+
 	// This is the admin of all the cw-ibc-lite contracts
 	// In production, this should be the chain's governance module
 	govAccount ibc.Wallet
@@ -44,8 +48,7 @@ type IBCLiteTestSuite struct {
 	ics26Router     *ics26router.Contract
 	ics02Client     *ics02client.Contract
 	ics07Tendermint *ics07tendermint.Contract
-	//nolint:unused
-	ics20Transfer *ics20transfer.Contract
+	ics20Transfer   *ics20transfer.Contract
 
 	// lastest trustedHeight of the ics07Tendermint contract
 	trustedHeight clienttypes.Height
@@ -62,6 +65,7 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		ics02CodeId string
 		ics07CodeId string
 		ics20CodeId string
+		cw20CodeId  string
 	)
 	s.Require().True(s.Run("UploadCodes", func() {
 		var err error
@@ -77,6 +81,9 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		ics07CodeId, err = wasmd.StoreContract(ctx, s.UserA.KeyName(), "../../artifacts/cw_ibc_lite_ics07_tendermint.wasm")
 		s.Require().NoError(err)
 		s.Require().NotEmpty(ics07CodeId)
+		cw20CodeId, err = wasmd.StoreContract(ctx, s.UserA.KeyName(), "./testdata/cw20_base.wasm")
+		s.Require().NoError(err)
+		s.Require().NotEmpty(cw20CodeId)
 	}))
 
 	s.Require().True(s.Run("Instantiate ICS26 and ICS02", func() {
@@ -175,6 +182,20 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 			RegisterIbcApp: &ics26router.ExecuteMsg_RegisterIbcApp{
 				Address: s.ics20Transfer.Address,
 			},
+		})
+		s.Require().NoError(err)
+	}))
+
+	s.Require().True(s.Run("Instantiate CW20", func() {
+		var err error
+		s.cw20Base, err = cw20base.Instantiate(ctx, s.UserA.KeyName(), cw20CodeId, s.UserA.FormattedAddress(), wasmd, cw20base.InstantiateMsg{
+			Name:     "IBC Lite E2E Test Token",
+			Symbol:   "ATOM",
+			Decimals: 6,
+			InitialBalances: []cw20base.Cw20Coin{{
+				Address: s.UserA.FormattedAddress(),
+				Amount:  cw20base.Uint128("100000000"),
+			}},
 		})
 		s.Require().NoError(err)
 	}))
