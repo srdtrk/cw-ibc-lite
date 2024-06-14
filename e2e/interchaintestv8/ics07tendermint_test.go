@@ -188,7 +188,6 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 		s.Require().NoError(err)
 		s.Require().NotEmpty(proof)
 		s.Require().NotEmpty(value)
-		// s.Require().Equal(expValue, value)
 		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
 	}))
 
