@@ -24,7 +24,7 @@ pub struct IbcLiteRouterCode(pub u64);
 /// `IbcLiteRouterContractQuerier` is a wrapper around [`QuerierWrapper`] that provides
 /// helpers for querying this contract.
 ///
-/// This can be constructed by [`IbcLiteRouterContract::query`] or [`IbcLiteRouterContractQuerier::new`].
+/// This can be constructed by [`IbcLiteRouterContract::query`] or [`Self::new`].
 pub struct IbcLiteRouterContractQuerier<'a> {
     querier: &'a QuerierWrapper<'a>,
     addr: String,

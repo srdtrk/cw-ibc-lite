@@ -25,7 +25,7 @@ pub struct Ics02ClientCode(pub u64);
 /// `Ics02ClientContractQuerier` is a wrapper around [`QuerierWrapper`] that provides
 /// helpers for querying this contract.
 ///
-/// This can be constructed by [`Ics02ClientContract::query`] or [`Ics02ClientContractQuerier::new`].
+/// This can be constructed by [`Ics02ClientContract::query`] or [`Self::new`].
 pub struct Ics02ClientContractQuerier<'a> {
     querier: &'a QuerierWrapper<'a>,
     addr: String,

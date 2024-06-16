@@ -29,7 +29,7 @@ pub struct LightClientCode(pub u64);
 /// `LightClientContractQuerier` is a wrapper around [`QuerierWrapper`] that provides
 /// helpers for querying this contract.
 ///
-/// This can be constructed by [`LightClientContract::query`] or [`LightClientContractQuerier::new`].
+/// This can be constructed by [`LightClientContract::query`] or [`Self::new`].
 pub struct LightClientContractQuerier<'a> {
     querier: &'a QuerierWrapper<'a>,
     addr: String,
