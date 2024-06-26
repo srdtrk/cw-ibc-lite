@@ -463,5 +463,6 @@ func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events []abci.Event) (cha
 		DestinationPort:    destPort,
 		DestinationChannel: destCh,
 		Data:               data,
+		TimeoutTimestamp:   timeout,
 	}, nil
 }
