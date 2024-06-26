@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/suite"
 
 	sdkmath "cosmossdk.io/math"
@@ -14,6 +15,7 @@ import (
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	commitmenttypesv2 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types/v2"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -234,42 +236,59 @@ func (s *IBCLiteTestSuite) TestWasmProofs() {
 	ctx := context.Background()
 	s.SetupSuite(ctx)
 
-	wasmd, _ := s.ChainA, s.ChainB
+	wasmd, simd := s.ChainA, s.ChainB
 
 	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
 
 	// During the setup, we have already committed some state into some contracts.
 	// Our goal is to prove the ICS02_CLIENT_ADDRESS state in ics26Router contract
 	var (
+		clientState *ibctm.ClientState
 		proofHeight int64
 		proof       []byte
 		value       []byte
-		// merklePath  commitmenttypes.MerklePath
+		merklePath  commitmenttypesv2.MerklePath
 	)
 	s.Require().True(s.Run("Generate wasm proof", func() {
+		resp, err := e2esuite.GRPCQuery[clienttypes.QueryClientStateResponse](ctx, simd, &clienttypes.QueryClientStateRequest{
+			ClientId: ibctesting.FirstClientID,
+		})
+		s.Require().NoError(err)
+
+		clientState = &ibctm.ClientState{}
+		err = proto.Unmarshal(resp.ClientState.Value, clientState)
+		s.Require().NoError(err)
+
 		contractAddr, err := s.ics26Router.AccAddress()
 		s.Require().NoError(err)
 
 		prefixStoreKey := wasmtypes.GetContractStorePrefix(contractAddr)
 		ics02AddrKey := "ics02_client_address"
 		key := cloneAppend(prefixStoreKey, []byte(ics02AddrKey))
+		merklePath = commitmenttypes.NewMerklePath(key)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(wasmtypes.StoreKey)), merklePath)
+		s.Require().NoError(err)
 
-		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
+		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(clientState.LatestHeight.RevisionHeight))
 		s.Require().NoError(err)
 		s.Require().NotEmpty(proof)
 		s.Require().NotEmpty(value)
-		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
+		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
 		s.Require().Equal(value, []byte(`"`+s.ics02Client.Address+`"`))
 	}))
 
 	// TODO: Can't finish this test because ibc-go does not have a way to verify proofs in wasm path:
 	// https://github.com/cosmos/ibc-go/issues/6496
 	s.Require().True(s.Run("Verify wasm proof", func() {
-		e2esuite.GRPCQuery[clienttypes.QueryVerifyMembershipResponse](ctx, wasmd, &clienttypes.QueryVerifyMembershipRequest{
-			ClientId: ibctesting.FirstClientID,
-			Proof:    proof,
-			Value:    value,
+		resp, err := e2esuite.GRPCQuery[clienttypes.QueryVerifyMembershipResponse](ctx, simd, &clienttypes.QueryVerifyMembershipRequest{
+			ClientId:    ibctesting.FirstClientID,
+			Proof:       proof,
+			Value:       value,
+			MerklePath:  merklePath,
+			ProofHeight: clientState.LatestHeight,
 		})
+		s.Require().NoError(err)
+		s.Require().True(resp.Success)
 	}))
 }
 
