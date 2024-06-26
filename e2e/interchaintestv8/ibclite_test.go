@@ -231,7 +231,6 @@ func (s *IBCLiteTestSuite) TestIBCLiteSetup() {
 }
 
 // This is a test to verify that go clients can prove the state of cosmwasm contracts
-// WIP
 func (s *IBCLiteTestSuite) TestWasmProofs() {
 	ctx := context.Background()
 	s.SetupSuite(ctx)
