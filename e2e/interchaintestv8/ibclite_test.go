@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
+	"errors"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/cosmos/gogoproto/proto"
@@ -12,7 +15,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	// sdk "github.com/cosmos/cosmos-sdk/types"
+
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -150,7 +154,7 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 					ClientId: ibctesting.FirstClientID,
 					MerklePathPrefix: &ics02client.MerklePath{
 						// TODO: make sure this is correct
-						KeyPath: []string{ibcexported.StoreKey},
+						KeyPath: []string{ibcexported.StoreKey, ""},
 					},
 				},
 				InstantiateMsg: ics02client.InstantiateMsg_2{
@@ -174,11 +178,11 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 
 		s.trustedHeight = height
 
-		clientInfo, err := s.ics02Client.QueryClient().ClientInfo(ctx, &ics02client.QueryMsg_ClientInfo{ClientId: "08-wasm-0"})
+		clientInfo, err := s.ics02Client.QueryClient().ClientInfo(ctx, &ics02client.QueryMsg_ClientInfo{ClientId: testvalues.FirstWasmClientID})
 		s.Require().NoError(err)
-		s.Require().Equal(clientInfo.ClientId, "08-wasm-0")
+		s.Require().Equal(clientInfo.ClientId, testvalues.FirstWasmClientID)
 		s.Require().Equal(clientInfo.CounterpartyInfo.ClientId, ibctesting.FirstClientID)
-		s.Require().Equal(clientInfo.CounterpartyInfo.MerklePathPrefix.KeyPath, []string{ibcexported.StoreKey})
+		s.Require().Equal(clientInfo.CounterpartyInfo.MerklePathPrefix.KeyPath, []string{ibcexported.StoreKey, ""})
 		s.Require().Equal(clientInfo.Address, s.ics07Tendermint.Address)
 	}))
 
@@ -228,7 +232,7 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 
 		_, err = s.BroadcastMessages(ctx, simd, simdRelayerUser, 200_000, &clienttypes.MsgProvideCounterparty{
 			ClientId:         ibctesting.FirstClientID,
-			CounterpartyId:   "08-wasm-0",
+			CounterpartyId:   testvalues.FirstWasmClientID,
 			MerklePathPrefix: &merklePathPrefix,
 			Signer:           simdRelayerUser.FormattedAddress(),
 		})
@@ -259,7 +263,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 	var packet channeltypes.Packet
 	s.Require().True(s.Run("SendPacket", func() {
 		transferMsg := cw20base.MsgTransfer{
-			SourceChannel: ibctesting.FirstChannelID,
+			SourceChannel: testvalues.FirstWasmClientID,
 			Receiver:      s.UserB.FormattedAddress(),
 		}
 		cw20SendMsg := cw20base.ExecuteMsg{
@@ -270,7 +274,10 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 			},
 		}
 
-		_, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg, "--gas", "500000")
+		res, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg, "--gas", "500000")
+		s.Require().NoError(err)
+
+		packet, err = s.ExtractPacketFromWasmEvents(res.Events)
 		s.Require().NoError(err)
 	}))
 
@@ -308,7 +315,8 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		s.Require().NotEmpty(proof)
 		s.Require().NotEmpty(value)
 		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
-		// s.Require().Equal(value, []byte(`"`+s.ics02Client.Address+`"`))
+		expCommitment := channeltypes.CommitLitePacket(simd.Config().EncodingConfig.Codec, packet)
+		s.Require().Equal(expCommitment, value)
 	}))
 }
 
@@ -403,5 +411,57 @@ func cloneAppend(bz []byte, tail []byte) (res []byte) {
 	return
 }
 
-// func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events sdk.StringEvents) channeltypes.Packet {
-// }
+func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events []abci.Event) (channeltypes.Packet, error) {
+	var (
+		err        error
+		sourceCh   string
+		destCh     string
+		sourcePort string
+		destPort   string
+		data       []byte
+		sequence   uint64
+		timeout    uint64
+	)
+	for _, event := range events {
+		if !strings.HasPrefix(event.Type, wasmtypes.CustomContractEventPrefix) {
+			continue
+		}
+
+		for _, attr := range event.Attributes {
+			switch attr.Key {
+			case channeltypes.AttributeKeySrcChannel:
+				sourceCh = attr.Value
+			case channeltypes.AttributeKeyDstChannel:
+				destCh = attr.Value
+			case channeltypes.AttributeKeySrcPort:
+				sourcePort = attr.Value
+			case channeltypes.AttributeKeyDstPort:
+				destPort = attr.Value
+			case channeltypes.AttributeKeySequence:
+				sequence, err = strconv.ParseUint(attr.Value, 10, 64)
+				s.Require().NoError(err)
+			case channeltypes.AttributeKeyDataHex:
+				data, err = hex.DecodeString(attr.Value)
+				s.Require().NoError(err)
+			case channeltypes.AttributeKeyTimeoutTimestamp:
+				timeout, err = strconv.ParseUint(attr.Value, 10, 64)
+				s.Require().NoError(err)
+			default:
+				continue
+			}
+		}
+	}
+
+	if sourceCh == "" || destCh == "" || sourcePort == "" || destPort == "" || len(data) == 0 || timeout == 0 {
+		return channeltypes.Packet{}, errors.New("packet not found in wasm events")
+	}
+
+	return channeltypes.Packet{
+		Sequence:           sequence,
+		SourcePort:         sourcePort,
+		SourceChannel:      sourceCh,
+		DestinationPort:    destPort,
+		DestinationChannel: destCh,
+		Data:               data,
+	}, nil
+}
