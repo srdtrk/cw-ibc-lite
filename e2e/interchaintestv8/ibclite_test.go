@@ -12,6 +12,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	// sdk "github.com/cosmos/cosmos-sdk/types"
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -256,7 +257,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 			},
 		}
 
-		_, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg)
+		_, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg, "--gas", "500000")
 		s.Require().NoError(err)
 	}))
 
@@ -388,3 +389,6 @@ func cloneAppend(bz []byte, tail []byte) (res []byte) {
 	copy(res[len(bz):], tail)
 	return
 }
+
+// func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events sdk.StringEvents) channeltypes.Packet {
+// }

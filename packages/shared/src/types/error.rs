@@ -35,6 +35,8 @@ pub enum ContractError {
 
     #[error("counterparty already provided")]
     CounterpartyAlreadyProvided,
+    #[error("counterparty not found")]
+    CounterpartyNotFound,
     #[error("invalid counterparty: expected {expected}, actual {actual}")]
     InvalidCounterparty { expected: String, actual: String },
     #[error("this contract does not accept block height for timeout, use timestamp")]

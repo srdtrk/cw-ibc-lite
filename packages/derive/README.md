@@ -1,4 +1,4 @@
-# `cw-ibc-lite-derive` - CosmWasm IBC Lite Derive
+# `cw-ibc-lite-derive` - `CosmWasm` IBC Lite Derive
 
 This crate provides a derive macro for contracts `receiving cw-ibc-lite` callback messages.
 This crate's macros are not intended to be used directly, but rather as a dependency of the

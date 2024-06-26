@@ -134,7 +134,9 @@ mod execute {
         // Ensure the counterparty is the destination channel.
         let counterparty_id = ics02_contract
             .query(&deps.querier)
-            .counterparty(msg.source_channel.as_str())?
+            .client_info(msg.source_channel.as_str())?
+            .counterparty_info
+            .ok_or(ContractError::CounterpartyNotFound)?
             .client_id;
         if let Some(dest_channel) = msg.dest_channel.as_ref() {
             if counterparty_id != dest_channel.as_str() {
@@ -210,7 +212,9 @@ mod execute {
         // Verify the counterparty.
         let counterparty = ics02_contract
             .query(&deps.querier)
-            .counterparty(packet.destination_channel.as_str())?;
+            .client_info(packet.destination_channel.as_str())?
+            .counterparty_info
+            .ok_or(ContractError::CounterpartyNotFound)?;
         if counterparty.client_id != packet.source_channel.as_str() {
             return Err(ContractError::invalid_counterparty(
                 counterparty.client_id,
@@ -277,7 +281,9 @@ mod execute {
         // Verify the counterparty.
         let counterparty = ics02_contract
             .query(&deps.querier)
-            .counterparty(packet.source_channel.as_str())?;
+            .client_info(packet.source_channel.as_str())?
+            .counterparty_info
+            .ok_or(ContractError::CounterpartyNotFound)?;
         if counterparty.client_id != packet.destination_channel.as_str() {
             return Err(ContractError::invalid_counterparty(
                 counterparty.client_id,
