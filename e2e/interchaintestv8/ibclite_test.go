@@ -205,14 +205,16 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 	s.Require().True(s.Run("Register counterparty for go client", func() {
 		_, simdRelayerUser := s.GetRelayerUsers(ctx)
 
-		_, err := s.BroadcastMessages(ctx, simd, simdRelayerUser, 200_000, &clienttypes.MsgProvideCounterparty{
-			ClientId:       ibctesting.FirstClientID,
-			CounterpartyId: "08-wasm-0",
-			MerklePathPrefix: &commitmenttypes.MerklePrefix{
-				// TODO: use wasm path!
-				KeyPrefix: []byte(ibcexported.StoreKey),
-			},
-			Signer: simdRelayerUser.FormattedAddress(),
+		contractAddr, err := s.ics26Router.AccAddress()
+		s.Require().NoError(err)
+		prefixStoreKey := wasmtypes.GetContractStorePrefix(contractAddr)
+		merklePathPrefix := commitmenttypes.NewMerklePath([]byte(wasmtypes.StoreKey), prefixStoreKey)
+
+		_, err = s.BroadcastMessages(ctx, simd, simdRelayerUser, 200_000, &clienttypes.MsgProvideCounterparty{
+			ClientId:         ibctesting.FirstClientID,
+			CounterpartyId:   "08-wasm-0",
+			MerklePathPrefix: &merklePathPrefix,
+			Signer:           simdRelayerUser.FormattedAddress(),
 		})
 		s.Require().NoError(err)
 	}))
