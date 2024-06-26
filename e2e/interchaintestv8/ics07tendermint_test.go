@@ -12,6 +12,7 @@ import (
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	commitmenttypesv2 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types/v2"
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
@@ -172,14 +173,14 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 		proofHeight int64
 		proof       []byte
 		value       []byte
-		merklePath  commitmenttypes.MerklePath
+		merklePath  commitmenttypesv2.MerklePath
 	)
 	s.Require().True(s.Run("CreateClientStateProof", func() {
 		s.UpdateClientContract(ctx, s.ics07Tendermint, simd)
 
 		var err error
 		key := host.FullClientStateKey(ibctesting.FirstClientID)
-		merklePath = commitmenttypes.NewMerklePath(string(key))
+		merklePath = commitmenttypes.NewMerklePath(key)
 		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(ibcexported.StoreKey)), merklePath)
 		s.Require().NoError(err)
 
@@ -200,7 +201,7 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 				RevisionHeight: int(proofHeight),
 			},
 			Path: ics07tendermint.MerklePath{
-				KeyPath: merklePath.KeyPath,
+				KeyPath: types.ToLegacyMerklePath(&merklePath).KeyPath,
 			},
 			Proof: base64.StdEncoding.EncodeToString(proof),
 			Value: base64.StdEncoding.EncodeToString(value),
@@ -217,7 +218,7 @@ func (s *ICS07TendermintTestSuite) TestVerifyMembership() {
 				RevisionHeight: int(proofHeight),
 			},
 			Path: ics07tendermint.MerklePath{
-				KeyPath: merklePath.KeyPath,
+				KeyPath: types.ToLegacyMerklePath(&merklePath).KeyPath,
 			},
 			Proof: base64.StdEncoding.EncodeToString(proof),
 			Value: base64.StdEncoding.EncodeToString(incorrectValue),
