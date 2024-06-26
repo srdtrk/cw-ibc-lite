@@ -14,8 +14,10 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types/v2"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -230,6 +232,70 @@ func TestWithIBCLiteTestSuite(t *testing.T) {
 func (s *IBCLiteTestSuite) TestIBCLiteSetup() {
 	ctx := context.Background()
 	s.SetupSuite(ctx)
+}
+
+// TestCW20Transfer tests the transfer of CW20 tokens
+func (s *IBCLiteTestSuite) TestCW20Transfer() {
+	ctx := context.Background()
+	s.SetupSuite(ctx)
+
+	wasmd, simd := s.ChainA, s.ChainB
+
+	// Transfer some tokens from UserA to UserB
+	var packet channeltypes.Packet
+	s.Require().True(s.Run("SendPacket", func() {
+		transferMsg := cw20base.MsgTransfer{
+			SourceChannel: ibctesting.FirstChannelID,
+			Receiver:      s.UserB.FormattedAddress(),
+		}
+		cw20SendMsg := cw20base.ExecuteMsg{
+			Send: &cw20base.ExecuteMsg_Send{
+				Amount:   cw20base.Uint128("1000000"),
+				Contract: s.ics20Transfer.Address,
+				Msg:      cw20base.ToJsonBinary(transferMsg),
+			},
+		}
+
+		_, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg)
+		s.Require().NoError(err)
+	}))
+
+	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
+
+	var (
+		clientState *ibctm.ClientState
+		proofHeight int64
+		proof       []byte
+		value       []byte
+		merklePath  commitmenttypesv2.MerklePath
+	)
+	s.Require().True(s.Run("Generate Packet Proof", func() {
+		resp, err := e2esuite.GRPCQuery[clienttypes.QueryClientStateResponse](ctx, simd, &clienttypes.QueryClientStateRequest{
+			ClientId: ibctesting.FirstClientID,
+		})
+		s.Require().NoError(err)
+
+		clientState = &ibctm.ClientState{}
+		err = proto.Unmarshal(resp.ClientState.Value, clientState)
+		s.Require().NoError(err)
+
+		contractAddr, err := s.ics26Router.AccAddress()
+		s.Require().NoError(err)
+
+		prefixStoreKey := wasmtypes.GetContractStorePrefix(contractAddr)
+		packetKey := host.PacketCommitmentPath(packet.SourcePort, packet.SourceChannel, packet.Sequence)
+		key := cloneAppend(prefixStoreKey, []byte(packetKey))
+		merklePath = commitmenttypes.NewMerklePath(key)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(wasmtypes.StoreKey)), merklePath)
+		s.Require().NoError(err)
+
+		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(clientState.LatestHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
+		// s.Require().Equal(value, []byte(`"`+s.ics02Client.Address+`"`))
+	}))
 }
 
 // This is a test to verify that go clients can prove the state of cosmwasm contracts
