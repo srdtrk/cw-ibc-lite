@@ -264,6 +264,13 @@ func (s *IBCLiteTestSuite) TestWasmProofs() {
 
 	// TODO: Can't finish this test because ibc-go does not have a way to verify proofs in wasm path:
 	// https://github.com/cosmos/ibc-go/issues/6496
+	s.Require().True(s.Run("Verify wasm proof", func() {
+		e2esuite.GRPCQuery[clienttypes.QueryVerifyMembershipResponse](ctx, wasmd, &clienttypes.QueryVerifyMembershipRequest{
+			ClientId: ibctesting.FirstClientID,
+			Proof:    proof,
+			Value:    value,
+		})
+	}))
 }
 
 func (s *IBCLiteTestSuite) UpdateClientContract(ctx context.Context, tmContract *ics07tendermint.Contract, counterpartyChain *cosmos.CosmosChain) {
