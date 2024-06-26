@@ -277,8 +277,6 @@ func (s *IBCLiteTestSuite) TestWasmProofs() {
 		s.Require().Equal(value, []byte(`"`+s.ics02Client.Address+`"`))
 	}))
 
-	// TODO: Can't finish this test because ibc-go does not have a way to verify proofs in wasm path:
-	// https://github.com/cosmos/ibc-go/issues/6496
 	s.Require().True(s.Run("Verify wasm proof", func() {
 		resp, err := e2esuite.GRPCQuery[clienttypes.QueryVerifyMembershipResponse](ctx, simd, &clienttypes.QueryVerifyMembershipRequest{
 			ClientId:    ibctesting.FirstClientID,
