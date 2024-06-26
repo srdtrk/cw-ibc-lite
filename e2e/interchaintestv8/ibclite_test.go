@@ -173,6 +173,13 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		s.Require().NoError(err)
 
 		s.trustedHeight = height
+
+		clientInfo, err := s.ics02Client.QueryClient().ClientInfo(ctx, &ics02client.QueryMsg_ClientInfo{ClientId: "08-wasm-0"})
+		s.Require().NoError(err)
+		s.Require().Equal(clientInfo.ClientId, "08-wasm-0")
+		s.Require().Equal(clientInfo.CounterpartyInfo.ClientId, ibctesting.FirstClientID)
+		s.Require().Equal(clientInfo.CounterpartyInfo.MerklePathPrefix.KeyPath, []string{ibcexported.StoreKey})
+		s.Require().Equal(clientInfo.Address, s.ics07Tendermint.Address)
 	}))
 
 	s.Require().True(s.Run("Instantiate ICS20", func() {
@@ -189,6 +196,12 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 			},
 		})
 		s.Require().NoError(err)
+
+		contractAddr, err := s.ics26Router.QueryClient().PortRouter(ctx, &ics26router.QueryMsg_PortRouter{
+			PortId: s.ics20Transfer.Port(),
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(s.ics20Transfer.Address, *contractAddr)
 	}))
 
 	s.Require().True(s.Run("Instantiate CW20", func() {
