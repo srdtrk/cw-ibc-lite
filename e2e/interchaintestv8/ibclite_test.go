@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,9 +16,11 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
@@ -32,6 +35,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/e2esuite"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/testvalues"
@@ -216,7 +220,7 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 			Decimals: 6,
 			InitialBalances: []cw20base.Cw20Coin{{
 				Address: s.UserA.FormattedAddress(),
-				Amount:  cw20base.Uint128("100000000"),
+				Amount:  cw20base.Uint128(strconv.FormatInt(testvalues.StartingTokenAmount, 10)),
 			}},
 		})
 		s.Require().NoError(err)
@@ -260,6 +264,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 	wasmd, simd := s.ChainA, s.ChainB
 
 	// Transfer some tokens from UserA to UserB
+	const sendAmount = 1_000_000
 	var packet channeltypes.Packet
 	s.Require().True(s.Run("SendPacket", func() {
 		transferMsg := cw20base.MsgTransfer{
@@ -268,7 +273,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		}
 		cw20SendMsg := cw20base.ExecuteMsg{
 			Send: &cw20base.ExecuteMsg_Send{
-				Amount:   cw20base.Uint128("1000000"),
+				Amount:   cw20base.Uint128(strconv.FormatInt(sendAmount, 10)),
 				Contract: s.ics20Transfer.Address,
 				Msg:      cw20base.ToJsonBinary(transferMsg),
 			},
@@ -282,6 +287,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 	}))
 
 	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
+	s.Require().NoError(testutil.WaitForBlocks(ctx, 1, simd))
 
 	var (
 		clientState *ibctm.ClientState
@@ -317,6 +323,37 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
 		expCommitment := channeltypes.CommitLitePacket(simd.Config().EncodingConfig.Codec, packet)
 		s.Require().Equal(expCommitment, value)
+	}))
+
+	s.Require().True(s.Run("RecvPacket", func() {
+		recvMsg := &channeltypes.MsgRecvPacket{
+			Packet:          packet,
+			ProofCommitment: proof,
+			ProofHeight:     clientState.LatestHeight,
+			Signer:          s.UserB.FormattedAddress(),
+		}
+
+		_, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, recvMsg)
+		s.Require().NoError(err)
+
+		ibcDenom := transfertypes.ParseDenomTrace(
+			fmt.Sprintf("%s/%s/%s", transfertypes.PortID, ibctesting.FirstClientID, s.cw20Base.Address),
+		).IBCDenom()
+
+		// Check the balance of UserB
+		resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
+			Address: s.UserB.FormattedAddress(),
+			Denom:   ibcDenom,
+		})
+		s.Require().NoError(err)
+		s.Require().NotNil(resp.Balance)
+		s.Require().Equal(int64(sendAmount), resp.Balance.Amount.Int64())
+		s.Require().Equal(ibcDenom, resp.Balance.Denom)
+
+		// Check the balance of UserA
+		cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
+		s.Require().NoError(err)
+		s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
 	}))
 }
 

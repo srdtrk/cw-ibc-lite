@@ -37,7 +37,7 @@ pub mod helpers {
     ) -> StdResult<u64> {
         let next_sequence = super::NEXT_SEQUENCE_SEND
             .may_load(storage, (port_id, channel_id))?
-            .unwrap_or_default();
+            .unwrap_or(1);
         super::NEXT_SEQUENCE_SEND.save(storage, (port_id, channel_id), &(next_sequence + 1))?;
         Ok(next_sequence)
     }
