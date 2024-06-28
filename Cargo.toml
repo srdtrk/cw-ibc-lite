@@ -42,16 +42,16 @@ serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
 # TODO: Remove this once cw-ownable is published with cw-plus-plus
 cw-ownable = { git = "https://github.com/CyberHoward/cw-plus-plus", branch = "bump/cosmwasm-2.0" }
-ibc-core-host = { git = "https://github.com/cosmos/ibc-rs", rev = "1ca03717ab074da605ace9ad75247dfa8fb03f86", default-features = false, features = ["schema"] }
-ibc-client-cw = { git = "https://github.com/cosmos/ibc-rs", rev = "1ca03717ab074da605ace9ad75247dfa8fb03f86", default-features = false }
-ibc-client-tendermint = { git = "https://github.com/cosmos/ibc-rs", rev = "1ca03717ab074da605ace9ad75247dfa8fb03f86", default-features = false, features = ["schema"] }
+ibc-core-host = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false, features = ["schema"] }
+ibc-client-cw = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false }
+ibc-client-tendermint = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false, features = ["schema"] }
 cw-ibc-lite-shared = { version = "0.1.0", path = "./packages/shared/" }
 cw-ibc-lite-derive = { version = "0.1.0", path = "./packages/derive/" }
 cw-ibc-lite-ics02-client = { version = "0.1.0", path = "./contracts/ics02-client/", default-features = false }
 cw-ibc-lite-ics26-router = { version = "0.1.0", path = "./contracts/ics26-router/", default-features = false }
 sha2 = "0.10.8"
-ibc-proto = { version = "0.45.0", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = [ "from", "into", "display", "try_into" ] }
+ibc-proto = { version = "0.46.0", default-features = false }
+derive_more = { version = "0.99.18", default-features = false, features = [ "from", "into", "display", "try_into" ] }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "1.0", features = ["derive"] }

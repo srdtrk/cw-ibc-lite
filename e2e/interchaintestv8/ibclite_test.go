@@ -39,6 +39,7 @@ import (
 
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/e2esuite"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/testvalues"
+	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/cw20base"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics02client"
 	"github.com/srdtrk/cw-ibc-lite/e2esuite/v8/types/ics07tendermint"
@@ -380,6 +381,40 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
 		s.Require().Equal(commitmentBz, value)
 	}))
+
+	s.Require().True(s.Run("Verify ack proof", func() {
+		_, err := s.ics07Tendermint.QueryClient().VerifyMembership(ctx, &ics07tendermint.QueryMsg_VerifyMembership{
+			DelayBlockPeriod: 0,
+			DelayTimePeriod:  0,
+			Height: ics07tendermint.Height2{
+				RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				RevisionHeight: int(proofHeight),
+			},
+			Path: ics07tendermint.MerklePath{
+				KeyPath: types.ToLegacyMerklePath(&merklePath).KeyPath,
+			},
+			Proof: base64.StdEncoding.EncodeToString(proof),
+			Value: base64.StdEncoding.EncodeToString(value),
+		})
+		s.Require().NoError(err)
+	}))
+
+	s.Require().True(s.Run("AckPacket", func() {
+		ackMsg := ics26router.ExecuteMsg{
+			Acknowledgement: &ics26router.ExecuteMsg_Acknowledgement{
+				Acknowledgement: ics26router.ToBinary(acknowledgement),
+				ProofAcked:      ics26router.ToBinary(proof),
+				ProofHeight: ics26router.Height{
+					RevisionHeight: int(s.trustedHeight.RevisionHeight),
+					RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				},
+				Packet: ics26router.ToPacket(packet),
+			},
+		}
+
+		_, err := s.ics26Router.Execute(ctx, s.UserA.KeyName(), ackMsg, "--gas", "500000")
+		s.Require().NoError(err)
+	}))
 }
 
 // This is a test to verify that go clients can prove the state of cosmwasm contracts
@@ -514,7 +549,7 @@ func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events []abci.Event) (cha
 		}
 	}
 
-	if sourceCh == "" || destCh == "" || sourcePort == "" || destPort == "" || len(data) == 0 || timeout == 0 {
+	if sourceCh == "" || destCh == "" || sourcePort == "" || destPort == "" || len(data) == 0 || timeout == 0 || sequence == 0 {
 		return channeltypes.Packet{}, errors.New("packet not found in wasm events")
 	}
 

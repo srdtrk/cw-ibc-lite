@@ -55,10 +55,6 @@ pub enum QueryMsg {
     /// Verify non-membership
     #[returns(ibc_client_cw::types::ContractResult)]
     VerifyNonMembership(VerifyNonMembershipMsgRaw),
-
-    /// Get the owner of the contract
-    #[returns(String)]
-    Owner {},
 }
 
 /// Contains the query responses supported by all light client contracts in ibc-lite

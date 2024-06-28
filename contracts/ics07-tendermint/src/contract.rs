@@ -4,7 +4,6 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw_ibc_lite_shared::types::error::ContractError;
 
 use crate::types::{
-    keys,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state,
 };
@@ -21,11 +20,10 @@ pub type TendermintContext<'a> = ibc_client_cw::context::Context<'a, state::Tend
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
-    state::owner::set(deps.storage, info.sender.as_str());
+    // cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
 
     let mut ctx = TendermintContext::new_mut(deps, env)?;
     let data = ctx.instantiate(msg.into())?;
@@ -76,7 +74,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::VerifyMembership(_) | QueryMsg::VerifyNonMembership(_) => {
             query::sudo_query(deps, env, msg.try_into()?)
         }
-        QueryMsg::Owner {} => query::owner(deps),
     }
 }
 
@@ -87,7 +84,7 @@ mod query {
 
     use ibc_client_cw::types::{QueryMsg as TendermintQueryMsg, QueryResponse};
 
-    use super::{state, Binary, ContractError, Deps, Env, TendermintContext};
+    use super::{Binary, ContractError, Deps, Env, TendermintContext};
 
     pub fn status(deps: Deps, env: Env, msg: TendermintQueryMsg) -> Result<Binary, ContractError> {
         tendermint_query(deps, env, msg)
@@ -155,11 +152,5 @@ mod query {
         let mut ctx = TendermintContext::new_mut(deps_mut, env)?;
 
         ctx.sudo(msg).map_err(ContractError::from)
-    }
-
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn owner(deps: Deps) -> Result<Binary, ContractError> {
-        let owner: String = state::owner::get(deps.storage)?;
-        Ok(cosmwasm_std::to_json_binary(&owner)?)
     }
 }
