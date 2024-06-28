@@ -34,6 +34,7 @@ pub fn instantiate(
 }
 
 /// Handles the execution of the contract by routing the messages to the respective handlers.
+/// Can be called by anyone.
 ///
 /// # Errors
 /// Will return an error if the handler returns an error.
@@ -42,11 +43,9 @@ pub fn instantiate(
 pub fn execute(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    state::owner::assert(deps.storage, info.sender.as_str())?;
-
     let mut ctx = TendermintContext::new_mut(deps, env)?;
     let data = ctx.sudo(msg.into())?;
 

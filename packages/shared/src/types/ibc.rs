@@ -107,6 +107,12 @@ impl TryFrom<cosmwasm_std::Binary> for Acknowledgement {
     }
 }
 
+impl From<Acknowledgement> for Binary {
+    fn from(ack: Acknowledgement) -> Self {
+        ack.0.into()
+    }
+}
+
 impl TryFrom<Vec<u8>> for Acknowledgement {
     type Error = ContractError;
 

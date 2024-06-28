@@ -309,6 +309,7 @@ mod execute {
         }
 
         // Verify the packet acknowledgement.
+        let packet_ack: ibc::Acknowledgement = msg.acknowledgement.try_into()?;
         let packet_ack_path: ics24_host::MerklePath = ics24_host::PacketAcknowledgementPath {
             port_id: packet.destination_port.clone(),
             channel_id: packet.destination_channel.clone(),
@@ -321,7 +322,7 @@ mod execute {
             .verify_membership(VerifyMembershipMsgRaw {
                 proof: msg.proof_acked.into(),
                 path: packet_ack_path,
-                value: msg.acknowledgement.to_vec(),
+                value: packet_ack.to_commitment_bytes(),
                 height: msg.proof_height.into(),
                 delay_time_period: 0,
                 delay_block_period: 0,
@@ -332,7 +333,7 @@ mod execute {
         let event = events::acknowledge_packet::success(&packet);
         let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnAcknowledgementPacket {
             packet,
-            acknowledgement: msg.acknowledgement,
+            acknowledgement: packet_ack.into(),
             relayer: info.sender.into(),
         };
         let ack_callback = ibc_app_contract.call(callback_msg)?;
@@ -399,7 +400,8 @@ mod reply {
     ) -> Result<Response, ContractError> {
         match result {
             SubMsgResult::Ok(resp) => {
-                #[allow(warnings)] // TODO: remove this once we have working tests and then fix it.
+                // TODO: allow depracated until we have working tests and then change it.
+                #[allow(deprecated)]
                 let ack: ibc::Acknowledgement = resp
                     .data
                     .ok_or(ContractError::RecvPacketCallbackNoResponse)?
