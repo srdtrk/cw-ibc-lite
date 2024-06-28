@@ -68,9 +68,7 @@ pub fn execute(
 #[cosmwasm_std::entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::QueryClient { client_id, query } => query::query_client(deps, client_id, query),
         QueryMsg::ClientInfo { client_id } => query::client_info(deps, client_id),
-        QueryMsg::Counterparty { client_id } => query::counterparty(deps, client_id),
     }
 }
 
@@ -188,8 +186,6 @@ mod execute {
 mod query {
     use super::{state, Binary, ContractError, Deps};
 
-    use cw_ibc_lite_shared::types::clients::helpers;
-
     use crate::types::msg::query_responses;
 
     /// Returns the address of the client encoded as a JSON binary.
@@ -207,24 +203,5 @@ mod query {
                 creator: creator.into_string(),
             },
         )?)
-    }
-
-    #[allow(clippy::needless_pass_by_value, clippy::module_name_repetitions)]
-    pub fn query_client(
-        deps: Deps,
-        client_id: String,
-        query_msg: cw_ibc_lite_shared::types::clients::msg::QueryMsg,
-    ) -> Result<Binary, ContractError> {
-        let client_address = state::CLIENTS.load(deps.storage, &client_id)?;
-        let client_contract = helpers::LightClientContract::new(client_address);
-
-        Ok(client_contract.query(&deps.querier).smart_raw(query_msg)?)
-    }
-
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn counterparty(deps: Deps, client_id: String) -> Result<Binary, ContractError> {
-        let counterparty_info: state::CounterpartyInfo =
-            state::COUNTERPARTY.load(deps.storage, &client_id)?;
-        Ok(cosmwasm_std::to_json_binary(&counterparty_info)?)
     }
 }

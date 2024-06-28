@@ -58,19 +58,16 @@ pub struct Height {
 
 impl Packet {
     /// `to_commitment_bytes` serializes the packet to commitment bytes as per [ibc-lite go implementation](https://github.com/cosmos/ibc-go/blob/2b40562bcd59ce820ddd7d6732940728487cf94e/modules/core/04-channel/types/packet.go#L38)
-    ///
-    /// # Panics
-    /// Panics if the timeout timestamp is not set.
     #[must_use]
     pub fn to_commitment_vec(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = vec![];
-        // timeout timestep should be validated before calling this function
-        let timeout_nanoseconds = self.timeout.timestamp().unwrap().nanos();
-        // NOTE: revision_number and revision_height can be ignored
-        let revision_number = 0_u64;
-        let revision_height = 0_u64;
+        let timeout_nanoseconds = self.timeout.timestamp().map_or(0_u64, |h| h.nanos());
+        let (revision_number, revision_height) = self
+            .timeout
+            .block()
+            .map_or((0_u64, 0_u64), |h| (h.revision, h.height));
         let data_hash = sha2::Sha256::digest(self.data.as_slice());
 
+        let mut buf: Vec<u8> = vec![];
         buf.extend_from_slice(&timeout_nanoseconds.to_be_bytes());
         buf.extend_from_slice(&revision_number.to_be_bytes());
         buf.extend_from_slice(&revision_height.to_be_bytes());
@@ -107,6 +104,12 @@ impl TryFrom<cosmwasm_std::Binary> for Acknowledgement {
 
     fn try_from(data: cosmwasm_std::Binary) -> Result<Self, Self::Error> {
         Vec::from(data).try_into()
+    }
+}
+
+impl From<Acknowledgement> for Binary {
+    fn from(ack: Acknowledgement) -> Self {
+        ack.0.into()
     }
 }
 

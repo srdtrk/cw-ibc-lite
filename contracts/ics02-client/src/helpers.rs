@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdResult, WasmMsg,
 };
 
-use crate::types::{msg, state::CounterpartyInfo};
+use crate::types::msg;
 
 /// `Ics02ClientContract` is a wrapper around Addr that provides helpers
 /// for working with this contract.
@@ -202,40 +202,6 @@ impl<'a> Ics02ClientContractQuerier<'a> {
         self.querier.query_wasm_smart(
             &self.addr,
             &msg::QueryMsg::ClientInfo {
-                client_id: client_id.into(),
-            },
-        )
-    }
-
-    /// `query_client` sends a [`msg::QueryMsg::QueryClient`] query to this contract.
-    /// It returns the result of the query on the client contract with the given client id.
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if the query fails
-    pub fn query_client(
-        &self,
-        client_id: impl Into<String>,
-        query: impl Into<cw_ibc_lite_shared::types::clients::msg::QueryMsg>,
-    ) -> StdResult<msg::query_responses::QueryClient> {
-        self.querier.query_wasm_smart(
-            &self.addr,
-            &msg::QueryMsg::QueryClient {
-                client_id: client_id.into(),
-                query: query.into(),
-            },
-        )
-    }
-
-    /// `counterparty` sends a [`msg::QueryMsg::Counterparty`] query to this contract.
-    /// It returns the counterparty of the client contract with the given client id.
-    ///
-    /// # Errors
-    /// This function returns an error if the query fails
-    pub fn counterparty(&self, client_id: impl Into<String>) -> StdResult<CounterpartyInfo> {
-        self.querier.query_wasm_smart(
-            &self.addr,
-            &msg::QueryMsg::Counterparty {
                 client_id: client_id.into(),
             },
         )

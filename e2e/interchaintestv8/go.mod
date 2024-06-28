@@ -12,6 +12,7 @@ require (
 	cosmossdk.io/x/tx v0.13.3
 	cosmossdk.io/x/upgrade v0.1.2
 	github.com/CosmWasm/wasmd v0.51.0
+	github.com/cometbft/cometbft v0.38.7
 	github.com/cosmos/cosmos-sdk v0.50.6
 	github.com/cosmos/gogoproto v1.4.12
 	github.com/cosmos/ibc-go/v8 v8.3.0
@@ -69,7 +70,6 @@ require (
 	github.com/cockroachdb/pebble v1.1.0 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
-	github.com/cometbft/cometbft v0.38.7 // indirect
 	github.com/cometbft/cometbft-db v0.10.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/cosmos-db v1.0.2 // indirect
@@ -261,7 +261,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/cosmos/ibc-go/v8 => github.com/cosmos/ibc-go/v8 v8.0.0-beta.1.0.20240626084404-83f90bbd2580
+replace github.com/cosmos/ibc-go/v8 => github.com/cosmos/ibc-go/v8 v8.0.0-beta.1.0.20240626120620-1607d5969996
 
 replace github.com/strangelove-ventures/interchaintest/v8 => github.com/DimitrisJim/interchaintest/v8 v8.0.0-20240419095404-2c9270423b9a
 

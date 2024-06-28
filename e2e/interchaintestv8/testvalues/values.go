@@ -10,6 +10,9 @@ const (
 	ChainARelayerName = "rlyA"
 	// ChainBRelayerName is the name given to the relayer wallet on ChainB
 	ChainBRelayerName = "rlyB"
+
+	// FirstWasmClientID is the client ID of the first wasm client created on ibc-lite
+	FirstWasmClientID = "08-wasm-0"
 )
 
 var (

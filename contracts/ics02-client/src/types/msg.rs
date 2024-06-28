@@ -50,28 +50,10 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Execute a query on a client.
-    /// Instead of using this message from external contracts, it is recommended to use
-    /// [`crate::helpers::Ics02ClientContractQuerier::client_querier`] to query the client.
-    #[returns(query_responses::QueryClient)]
-    QueryClient {
-        /// The client id of the client to execute the query on.
-        client_id: String,
-        /// The query to execute on the client.
-        query: cw_ibc_lite_shared::types::clients::msg::QueryMsg,
-    },
     /// Get the contract address of a client. Returns an error if the client does not exist.
     #[returns(query_responses::ClientInfo)]
     ClientInfo {
         /// The client id of the client to get the address of.
-        client_id: String,
-    },
-    /// Get the counterparty of a client. Returns an error if the client does not have a
-    /// counterparty or the client does not exist.
-    // TODO: Delete
-    #[returns(super::state::CounterpartyInfo)]
-    Counterparty {
-        /// The client id of the client to get the counterparty of.
         client_id: String,
     },
 }
