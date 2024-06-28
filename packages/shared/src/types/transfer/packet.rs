@@ -31,7 +31,7 @@ pub type Ics20Ack = AcknowledgementData;
 
 impl Ics20Ack {
     /// The wrapped bytes for a successful ICS20 acknowledgement.
-    pub const SUCCESS_BYTES: &'static [u8] = b"1";
+    pub const SUCCESS_BYTES: &'static [u8] = &[1];
 
     /// Creates a successful ICS20 acknowledgement.
     #[must_use]

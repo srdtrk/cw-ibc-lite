@@ -275,7 +275,7 @@ mod execute {
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
 
-        let ibc_app_address = state::IBC_APPS.load(deps.storage, packet.source_channel.as_str())?;
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, packet.source_port.as_str())?;
         let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
 
         // Verify the counterparty.
