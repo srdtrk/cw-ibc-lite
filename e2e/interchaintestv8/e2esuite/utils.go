@@ -11,6 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 
@@ -84,7 +86,7 @@ func (s *TestSuite) fundAddress(ctx context.Context, chain *cosmos.CosmosChain, 
 // ExtractValueFromEvents extracts the value of an attribute from a list of events.
 // If the attribute is not found, the function returns an empty string and false.
 // If the attribute is found, the function returns the value and true.
-func (*TestSuite) ExtractValueFromEvents(events sdk.StringEvents, eventType, attrKey string) (string, bool) {
+func (*TestSuite) ExtractValueFromEvents(events []abci.Event, eventType, attrKey string) (string, bool) {
 	for _, event := range events {
 		if event.Type != eventType {
 			continue

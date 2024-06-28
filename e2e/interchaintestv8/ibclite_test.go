@@ -325,6 +325,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		s.Require().Equal(expCommitment, value)
 	}))
 
+	var acknowledgement []byte
 	s.Require().True(s.Run("RecvPacket", func() {
 		recvMsg := &channeltypes.MsgRecvPacket{
 			Packet:          packet,
@@ -333,7 +334,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 			Signer:          s.UserB.FormattedAddress(),
 		}
 
-		_, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, recvMsg)
+		txResp, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, recvMsg)
 		s.Require().NoError(err)
 
 		ibcDenom := transfertypes.ParseDenomTrace(
@@ -354,6 +355,30 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
 		s.Require().NoError(err)
 		s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
+
+		ackHex, found := s.ExtractValueFromEvents(txResp.Events, channeltypes.EventTypeWriteAck, channeltypes.AttributeKeyAckHex)
+		s.Require().True(found)
+
+		acknowledgement, err = hex.DecodeString(ackHex)
+		s.Require().NoError(err)
+	}))
+
+	s.UpdateClientContract(ctx, s.ics07Tendermint, simd)
+
+	s.Require().True(s.Run("Generate ack proof", func() {
+		var err error
+		key := host.PacketAcknowledgementKey(packet.DestinationPort, packet.DestinationChannel, packet.Sequence)
+		merklePath = commitmenttypes.NewMerklePath(key)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(wasmtypes.StoreKey)), merklePath)
+		s.Require().NoError(err)
+
+		commitmentBz := channeltypes.CommitAcknowledgement(acknowledgement)
+		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(clientState.LatestHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
+		s.Require().Equal(commitmentBz, value)
 	}))
 }
 
