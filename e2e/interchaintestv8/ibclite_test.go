@@ -287,7 +287,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 	}))
 
 	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
-	s.Require().NoError(testutil.WaitForBlocks(ctx, 1, simd))
+	s.Require().NoError(testutil.WaitForBlocks(ctx, 3, simd))
 
 	var (
 		clientState *ibctm.ClientState
@@ -369,15 +369,15 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		var err error
 		key := host.PacketAcknowledgementKey(packet.DestinationPort, packet.DestinationChannel, packet.Sequence)
 		merklePath = commitmenttypes.NewMerklePath(key)
-		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(wasmtypes.StoreKey)), merklePath)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(ibcexported.StoreKey)), merklePath)
 		s.Require().NoError(err)
 
 		commitmentBz := channeltypes.CommitAcknowledgement(acknowledgement)
-		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(clientState.LatestHeight.RevisionHeight))
+		value, proof, proofHeight, err = s.QueryProofs(ctx, simd, ibcexported.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
 		s.Require().NoError(err)
 		s.Require().NotEmpty(proof)
 		s.Require().NotEmpty(value)
-		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
+		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
 		s.Require().Equal(commitmentBz, value)
 	}))
 }
