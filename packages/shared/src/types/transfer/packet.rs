@@ -104,3 +104,17 @@ impl Ics20Packet {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ack_success() {
+        let ack = Ics20Ack::success();
+        assert_eq!(ack, Ics20Ack::Result(vec![1].into()));
+
+        let serialized = ack.to_vec();
+        assert_eq!(serialized, br#"{"result":"AQ=="}"#);
+    }
+}

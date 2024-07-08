@@ -505,6 +505,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 
 		acknowledgement2, err = hex.DecodeString(ackHex)
 		s.Require().NoError(err)
+		s.Require().Equal([]byte(`{"result":"AQ=="}`), acknowledgement2)
 	}))
 
 	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
