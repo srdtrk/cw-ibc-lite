@@ -344,25 +344,27 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		txResp, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, recvMsg)
 		s.Require().NoError(err)
 
-		ibcDenom := transfertypes.ParseDenomTrace(
-			fmt.Sprintf("%s/%s/%s", transfertypes.PortID, ibctesting.FirstClientID, s.cw20Base.Address),
-		).IBCDenom()
+		s.Require().True(s.Run("Check balances", func() {
+			ibcDenom := transfertypes.ParseDenomTrace(
+				fmt.Sprintf("%s/%s/%s", transfertypes.PortID, ibctesting.FirstClientID, s.cw20Base.Address),
+			).IBCDenom()
 
-		// Check the balance of UserB
-		resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
-			Address: s.UserB.FormattedAddress(),
-			Denom:   ibcDenom,
-		})
-		s.Require().NoError(err)
-		s.Require().NotNil(resp.Balance)
-		s.Require().Equal(int64(sendAmount), resp.Balance.Amount.Int64())
-		s.Require().Equal(ibcDenom, resp.Balance.Denom)
-		simdCoin = resp.Balance
+			// Check the balance of UserB
+			resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
+				Address: s.UserB.FormattedAddress(),
+				Denom:   ibcDenom,
+			})
+			s.Require().NoError(err)
+			s.Require().NotNil(resp.Balance)
+			s.Require().Equal(int64(sendAmount), resp.Balance.Amount.Int64())
+			s.Require().Equal(ibcDenom, resp.Balance.Denom)
+			simdCoin = resp.Balance
 
-		// Check the balance of UserA
-		cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
-		s.Require().NoError(err)
-		s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
+			// Check the balance of UserA
+			cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
+			s.Require().NoError(err)
+			s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
+		}))
 
 		ackHex, found := s.ExtractValueFromEvents(txResp.Events, channeltypes.EventTypeWriteAck, channeltypes.AttributeKeyAckHex)
 		s.Require().True(found)
@@ -478,7 +480,29 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 			},
 		}
 
-		_, err := s.ics26Router.Execute(ctx, s.UserA.KeyName(), recvMsg, "--gas", "800000")
+		txResp, err := s.ics26Router.Execute(ctx, s.UserA.KeyName(), recvMsg, "--gas", "700000")
+		s.Require().NoError(err)
+
+		s.Require().True(s.Run("Check balances", func() {
+			// Check the balance of UserB
+			resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
+				Address: s.UserB.FormattedAddress(),
+				Denom:   simdCoin.Denom,
+			})
+			s.Require().NoError(err)
+			s.Require().NotNil(resp.Balance)
+			s.Require().Equal(int64(0), resp.Balance.Amount.Int64())
+
+			// Check the balance of UserA
+			cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
+			s.Require().NoError(err)
+			s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount, 10), string(cw20Resp.Balance))
+		}))
+
+		ackHex, found := s.ExtractValueFromEvents(txResp.Events, wasmtypes.CustomContractEventPrefix+channeltypes.EventTypeWriteAck, channeltypes.AttributeKeyAckHex)
+		s.Require().True(found)
+
+		acknowledgement, err = hex.DecodeString(ackHex)
 		s.Require().NoError(err)
 	}))
 }
