@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/suite"
@@ -16,6 +17,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -121,6 +123,8 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		s.Require().Len(resp.Contracts, 1)
 		s.Require().NotEmpty(resp.Contracts[0])
 
+		// ics02Client is instantiated by ics26Router, so we need to fetch it from the response
+		// and cast it to the correct type
 		s.ics02Client, err = ics02client.NewContract(resp.Contracts[0], ics02CodeId, wasmd)
 		s.Require().NoError(err)
 	}))
@@ -158,7 +162,6 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 				CounterpartyInfo: &ics02client.CounterpartyInfo{
 					ClientId: ibctesting.FirstClientID,
 					MerklePathPrefix: &ics02client.MerklePath{
-						// TODO: make sure this is correct
 						KeyPath: []string{ibcexported.StoreKey, ""},
 					},
 				},
@@ -283,7 +286,7 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		res, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg, "--gas", "500000")
 		s.Require().NoError(err)
 
-		packet, err = s.ExtractPacketFromWasmEvents(res.Events)
+		packet, err = s.ExtractPacketFromEvents(res.Events)
 		s.Require().NoError(err)
 	}))
 
@@ -326,7 +329,10 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		s.Require().Equal(expCommitment, value)
 	}))
 
-	var acknowledgement []byte
+	var (
+		acknowledgement []byte
+		simdCoin        *sdk.Coin
+	)
 	s.Require().True(s.Run("RecvPacket", func() {
 		recvMsg := &channeltypes.MsgRecvPacket{
 			Packet:          packet,
@@ -338,24 +344,27 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		txResp, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, recvMsg)
 		s.Require().NoError(err)
 
-		ibcDenom := transfertypes.ParseDenomTrace(
-			fmt.Sprintf("%s/%s/%s", transfertypes.PortID, ibctesting.FirstClientID, s.cw20Base.Address),
-		).IBCDenom()
+		s.Require().True(s.Run("Check balances", func() {
+			ibcDenom := transfertypes.ParseDenomTrace(
+				fmt.Sprintf("%s/%s/%s", transfertypes.PortID, ibctesting.FirstClientID, s.cw20Base.Address),
+			).IBCDenom()
 
-		// Check the balance of UserB
-		resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
-			Address: s.UserB.FormattedAddress(),
-			Denom:   ibcDenom,
-		})
-		s.Require().NoError(err)
-		s.Require().NotNil(resp.Balance)
-		s.Require().Equal(int64(sendAmount), resp.Balance.Amount.Int64())
-		s.Require().Equal(ibcDenom, resp.Balance.Denom)
+			// Check the balance of UserB
+			resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
+				Address: s.UserB.FormattedAddress(),
+				Denom:   ibcDenom,
+			})
+			s.Require().NoError(err)
+			s.Require().NotNil(resp.Balance)
+			s.Require().Equal(int64(sendAmount), resp.Balance.Amount.Int64())
+			s.Require().Equal(ibcDenom, resp.Balance.Denom)
+			simdCoin = resp.Balance
 
-		// Check the balance of UserA
-		cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
-		s.Require().NoError(err)
-		s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
+			// Check the balance of UserA
+			cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
+			s.Require().NoError(err)
+			s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
+		}))
 
 		ackHex, found := s.ExtractValueFromEvents(txResp.Events, channeltypes.EventTypeWriteAck, channeltypes.AttributeKeyAckHex)
 		s.Require().True(found)
@@ -413,6 +422,133 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		}
 
 		_, err := s.ics26Router.Execute(ctx, s.UserA.KeyName(), ackMsg, "--gas", "500000")
+		s.Require().NoError(err)
+	}))
+
+	// Now we send the packet back
+	var packet2 channeltypes.Packet
+	s.Require().True(s.Run("SendPacket2", func() {
+		msgTransfer := transfertypes.MsgTransfer{
+			SourcePort:       transfertypes.PortID,
+			SourceChannel:    ibctesting.FirstClientID,
+			Token:            *simdCoin,
+			Sender:           s.UserB.FormattedAddress(),
+			Receiver:         s.UserA.FormattedAddress(),
+			DestPort:         s.ics20Transfer.Port(),
+			DestChannel:      testvalues.FirstWasmClientID,
+			TimeoutTimestamp: uint64(time.Now().Add(10 * time.Minute).UnixNano()),
+		}
+
+		txResp, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, &msgTransfer)
+		s.Require().NoError(err)
+
+		packet2, err = s.ExtractPacketFromEvents(txResp.Events)
+		s.Require().NoError(err)
+		s.Require().Equal(s.ics20Transfer.Port(), packet2.DestinationPort)
+		s.Require().Equal(testvalues.FirstWasmClientID, packet2.DestinationChannel)
+		s.Require().Equal(transfertypes.PortID, packet2.SourcePort)
+		s.Require().Equal(ibctesting.FirstClientID, packet2.SourceChannel)
+	}))
+
+	s.UpdateClientContract(ctx, s.ics07Tendermint, simd)
+
+	s.Require().True(s.Run("Generate Packet2 Proof", func() {
+		var err error
+		key := host.PacketCommitmentPath(packet2.SourcePort, packet2.SourceChannel, packet2.Sequence)
+		merklePath = commitmenttypes.NewMerklePath([]byte(key))
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(ibcexported.StoreKey)), merklePath)
+		s.Require().NoError(err)
+
+		value, proof, proofHeight, err = s.QueryProofs(ctx, simd, ibcexported.StoreKey, []byte(key), int64(s.trustedHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
+		expCommitment := channeltypes.CommitLitePacket(simd.Config().EncodingConfig.Codec, packet2)
+		s.Require().Equal(expCommitment, value)
+	}))
+
+	var acknowledgement2 []byte
+	s.Require().True(s.Run("RecvPacket2", func() {
+		recvMsg := ics26router.ExecuteMsg{
+			RecvPacket: &ics26router.ExecuteMsg_RecvPacket{
+				Packet:          ics26router.ToPacket(packet2),
+				ProofCommitment: ics26router.ToBinary(proof),
+				ProofHeight: ics26router.Height{
+					RevisionHeight: int(s.trustedHeight.RevisionHeight),
+					RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				},
+			},
+		}
+
+		txResp, err := s.ics26Router.Execute(ctx, s.UserA.KeyName(), recvMsg, "--gas", "700000")
+		s.Require().NoError(err)
+
+		s.Require().True(s.Run("Check balances", func() {
+			// Check the balance of UserB
+			resp, err := e2esuite.GRPCQuery[banktypes.QueryBalanceResponse](ctx, simd, &banktypes.QueryBalanceRequest{
+				Address: s.UserB.FormattedAddress(),
+				Denom:   simdCoin.Denom,
+			})
+			s.Require().NoError(err)
+			s.Require().NotNil(resp.Balance)
+			s.Require().Equal(int64(0), resp.Balance.Amount.Int64())
+
+			// Check the balance of UserA
+			cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
+			s.Require().NoError(err)
+			s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount, 10), string(cw20Resp.Balance))
+		}))
+
+		ackHex, found := s.ExtractValueFromEvents(txResp.Events, wasmtypes.CustomContractEventPrefix+channeltypes.EventTypeWriteAck, channeltypes.AttributeKeyAckHex)
+		s.Require().True(found)
+
+		acknowledgement2, err = hex.DecodeString(ackHex)
+		s.Require().NoError(err)
+		s.Require().Equal([]byte(`{"result":"AQ=="}`), acknowledgement2)
+	}))
+
+	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
+	s.Require().NoError(testutil.WaitForBlocks(ctx, 3, simd))
+
+	s.Require().True(s.Run("Generate ack proof", func() {
+		resp, err := e2esuite.GRPCQuery[clienttypes.QueryClientStateResponse](ctx, simd, &clienttypes.QueryClientStateRequest{
+			ClientId: ibctesting.FirstClientID,
+		})
+		s.Require().NoError(err)
+
+		err = proto.Unmarshal(resp.ClientState.Value, clientState)
+		s.Require().NoError(err)
+
+		contractAddr, err := s.ics26Router.AccAddress()
+		s.Require().NoError(err)
+
+		prefixStoreKey := wasmtypes.GetContractStorePrefix(contractAddr)
+		packetKey := host.PacketAcknowledgementKey(packet2.DestinationPort, packet2.DestinationChannel, packet2.Sequence)
+		key := cloneAppend(prefixStoreKey, packetKey)
+		merklePath = commitmenttypes.NewMerklePath(key)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(wasmtypes.StoreKey)), merklePath)
+		s.Require().NoError(err)
+
+		commitmentBz := channeltypes.CommitAcknowledgement(acknowledgement2)
+		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(clientState.LatestHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
+		s.Require().Equal(commitmentBz, value)
+	}))
+
+	s.Require().True(s.Run("AckPacket2", func() {
+		ackMsg := channeltypes.MsgAcknowledgement{
+			Packet:          packet2,
+			Acknowledgement: acknowledgement2,
+			ProofAcked:      proof,
+			ProofHeight:     clientState.LatestHeight,
+			Signer:          s.UserB.FormattedAddress(),
+		}
+
+		_, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, &ackMsg)
 		s.Require().NoError(err)
 	}))
 }
@@ -508,7 +644,7 @@ func cloneAppend(bz []byte, tail []byte) (res []byte) {
 	return
 }
 
-func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events []abci.Event) (channeltypes.Packet, error) {
+func (s *IBCLiteTestSuite) ExtractPacketFromEvents(events []abci.Event) (channeltypes.Packet, error) {
 	var (
 		err        error
 		sourceCh   string
@@ -520,7 +656,7 @@ func (s *IBCLiteTestSuite) ExtractPacketFromWasmEvents(events []abci.Event) (cha
 		timeout    uint64
 	)
 	for _, event := range events {
-		if !strings.HasPrefix(event.Type, wasmtypes.CustomContractEventPrefix) {
+		if !strings.HasPrefix(event.Type, wasmtypes.CustomContractEventPrefix) && event.Type != channeltypes.EventTypeSendPacket {
 			continue
 		}
 

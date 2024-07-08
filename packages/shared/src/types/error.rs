@@ -20,6 +20,8 @@ pub enum ContractError {
     IdentifierError(#[from] ibc_core_host::types::error::IdentifierError),
     #[error("{0}")]
     TransferError(#[from] super::transfer::error::TransferError),
+    #[error("{0}")]
+    BufanyError(#[from] anybuf::BufanyError),
 
     #[error("unauthorized")]
     Unauthorized,

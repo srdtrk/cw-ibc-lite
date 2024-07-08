@@ -139,3 +139,19 @@ impl From<Height> for ibc_proto::ibc::core::client::v1::Height {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::types::transfer::packet::Ics20Ack;
+
+    use super::*;
+
+    #[test]
+    fn packet_acknowledgement() {
+        let ics20_ack = Ics20Ack::success();
+        let bin = Binary::from(ics20_ack.to_vec());
+
+        let ack = Acknowledgement::try_from(bin).unwrap();
+        assert_eq!(ack.as_slice(), br#"{"result":"AQ=="}"#);
+    }
+}

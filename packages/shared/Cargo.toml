@@ -20,3 +20,4 @@ sha2 = { workspace = true }
 ibc-proto = { workspace = true }
 derive_more = { workspace = true }
 cw-ibc-lite-derive = { workspace = true }
+anybuf = { workspace = true }

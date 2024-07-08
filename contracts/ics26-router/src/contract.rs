@@ -400,12 +400,11 @@ mod reply {
     ) -> Result<Response, ContractError> {
         match result {
             SubMsgResult::Ok(resp) => {
-                // TODO: allow depracated until we have working tests and then change it.
-                #[allow(deprecated)]
-                let ack: ibc::Acknowledgement = resp
-                    .data
-                    .ok_or(ContractError::RecvPacketCallbackNoResponse)?
-                    .try_into()?;
+                let ack = ibc::Acknowledgement::new(
+                    anybuf::Bufany::deserialize(&resp.msg_responses[0].value)?
+                        .bytes(1)
+                        .unwrap(),
+                );
                 let packet: ibc::Packet = cosmwasm_std::from_json(payload)?;
 
                 state::helpers::commit_packet_ack(deps.storage, &packet, &ack)?;

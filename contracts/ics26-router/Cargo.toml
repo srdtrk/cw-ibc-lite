@@ -27,3 +27,4 @@ cw-ibc-lite-shared = { workspace = true }
 cw-ibc-lite-ics02-client = { workspace = true }
 ibc-client-cw = { workspace = true }
 cw-ownable = { workspace = true }
+anybuf = { workspace = true }
