@@ -79,8 +79,8 @@ pub fn on_recv_packet(
     let ics20_packet: Ics20Packet = cosmwasm_std::from_json(packet.data)?;
     let base_denom = utils::transfer::parse_voucher_denom(
         &ics20_packet.denom,
-        port_id.as_str(),
-        packet.destination_channel.as_str(),
+        packet.source_port.as_str(),
+        packet.source_channel.as_str(),
     )?;
 
     // Subtract amount from the escrowed balance.
