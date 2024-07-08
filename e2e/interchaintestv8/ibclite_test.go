@@ -468,7 +468,8 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		s.Require().Equal(expCommitment, value)
 	}))
 
-	s.Require().True(s.Run("RecvPacket IBC Lite", func() {
+	var acknowledgement2 []byte
+	s.Require().True(s.Run("RecvPacket2", func() {
 		recvMsg := ics26router.ExecuteMsg{
 			RecvPacket: &ics26router.ExecuteMsg_RecvPacket{
 				Packet:          ics26router.ToPacket(packet2),
@@ -502,7 +503,51 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 		ackHex, found := s.ExtractValueFromEvents(txResp.Events, wasmtypes.CustomContractEventPrefix+channeltypes.EventTypeWriteAck, channeltypes.AttributeKeyAckHex)
 		s.Require().True(found)
 
-		acknowledgement, err = hex.DecodeString(ackHex)
+		acknowledgement2, err = hex.DecodeString(ackHex)
+		s.Require().NoError(err)
+	}))
+
+	s.Require().NoError(s.Relayer.UpdateClients(ctx, s.ExecRep, s.PathName))
+	s.Require().NoError(testutil.WaitForBlocks(ctx, 3, simd))
+
+	s.Require().True(s.Run("Generate ack proof", func() {
+		resp, err := e2esuite.GRPCQuery[clienttypes.QueryClientStateResponse](ctx, simd, &clienttypes.QueryClientStateRequest{
+			ClientId: ibctesting.FirstClientID,
+		})
+		s.Require().NoError(err)
+
+		err = proto.Unmarshal(resp.ClientState.Value, clientState)
+		s.Require().NoError(err)
+
+		contractAddr, err := s.ics26Router.AccAddress()
+		s.Require().NoError(err)
+
+		prefixStoreKey := wasmtypes.GetContractStorePrefix(contractAddr)
+		packetKey := host.PacketAcknowledgementKey(packet2.DestinationPort, packet2.DestinationChannel, packet2.Sequence)
+		key := cloneAppend(prefixStoreKey, packetKey)
+		merklePath = commitmenttypes.NewMerklePath(key)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(wasmtypes.StoreKey)), merklePath)
+		s.Require().NoError(err)
+
+		commitmentBz := channeltypes.CommitAcknowledgement(acknowledgement2)
+		value, proof, proofHeight, err = s.QueryProofs(ctx, wasmd, wasmtypes.StoreKey, key, int64(clientState.LatestHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().NotEmpty(value)
+		s.Require().Equal(int64(clientState.LatestHeight.RevisionHeight), proofHeight)
+		s.Require().Equal(commitmentBz, value)
+	}))
+
+	s.Require().True(s.Run("AckPacket2", func() {
+		ackMsg := channeltypes.MsgAcknowledgement{
+			Packet:          packet2,
+			Acknowledgement: acknowledgement2,
+			ProofAcked:      proof,
+			ProofHeight:     clientState.LatestHeight,
+			Signer:          s.UserB.FormattedAddress(),
+		}
+
+		_, err := s.BroadcastMessages(ctx, simd, s.UserB, 200_000, &ackMsg)
 		s.Require().NoError(err)
 	}))
 }
