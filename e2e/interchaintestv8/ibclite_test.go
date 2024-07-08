@@ -553,6 +553,85 @@ func (s *IBCLiteTestSuite) TestCW20Transfer() {
 	}))
 }
 
+func (s *IBCLiteTestSuite) TestTimeout() {
+	ctx := context.Background()
+	s.SetupSuite(ctx)
+
+	_, simd := s.ChainA, s.ChainB
+
+	// Transfer some tokens from UserA to UserB
+	const sendAmount = 1_000_000
+	var packet channeltypes.Packet
+	s.Require().True(s.Run("SendPacket", func() {
+		timeoutSeconds := uint64(10)
+		transferMsg := cw20base.MsgTransfer{
+			SourceChannel: testvalues.FirstWasmClientID,
+			Receiver:      s.UserB.FormattedAddress(),
+			Timeout:       &timeoutSeconds,
+		}
+		cw20SendMsg := cw20base.ExecuteMsg{
+			Send: &cw20base.ExecuteMsg_Send{
+				Amount:   cw20base.Uint128(strconv.FormatInt(sendAmount, 10)),
+				Contract: s.ics20Transfer.Address,
+				Msg:      cw20base.ToJsonBinary(transferMsg),
+			},
+		}
+
+		res, err := s.cw20Base.Execute(ctx, s.UserA.KeyName(), cw20SendMsg, "--gas", "500000")
+		s.Require().NoError(err)
+
+		packet, err = s.ExtractPacketFromEvents(res.Events)
+		s.Require().NoError(err)
+
+		s.Require().True(s.Run("Check balances", func() {
+			// Check the balance of UserA
+			cw20Resp, err := s.cw20Base.QueryClient().Balance(ctx, &cw20base.QueryMsg_Balance{Address: s.UserA.FormattedAddress()})
+			s.Require().NoError(err)
+			s.Require().Equal(strconv.FormatInt(testvalues.StartingTokenAmount-sendAmount, 10), string(cw20Resp.Balance))
+		}))
+	}))
+
+	// Wait for the timeout
+	time.Sleep(15 * time.Second)
+	s.UpdateClientContract(ctx, s.ics07Tendermint, simd)
+
+	var (
+		proofHeight int64
+		proof       []byte
+		value       []byte
+		merklePath  commitmenttypesv2.MerklePath
+	)
+	s.Require().True(s.Run("Generate timeout proof", func() {
+		var err error
+		key := host.PacketReceiptKey(packet.DestinationPort, packet.DestinationChannel, packet.Sequence)
+		merklePath = commitmenttypes.NewMerklePath(key)
+		merklePath, err = commitmenttypes.ApplyPrefix(commitmenttypes.NewMerklePrefix([]byte(ibcexported.StoreKey)), merklePath)
+		s.Require().NoError(err)
+
+		value, proof, proofHeight, err = s.QueryProofs(ctx, simd, ibcexported.StoreKey, key, int64(s.trustedHeight.RevisionHeight))
+		s.Require().NoError(err)
+		s.Require().NotEmpty(proof)
+		s.Require().Empty(value)
+		s.Require().Equal(int64(s.trustedHeight.RevisionHeight), proofHeight)
+	}))
+
+	s.Require().True(s.Run("TimeoutPacket", func() {
+		timeoutMsg := ics26router.ExecuteMsg{
+			Timeout: &ics26router.ExecuteMsg_Timeout{
+				Packet:          ics26router.ToPacket(packet),
+				ProofUnreceived: ics26router.ToBinary(proof),
+				ProofHeight: ics26router.Height{
+					RevisionHeight: int(s.trustedHeight.RevisionHeight),
+					RevisionNumber: int(s.trustedHeight.RevisionNumber),
+				},
+			},
+		}
+
+		_, err := s.ics26Router.Execute(ctx, s.UserA.KeyName(), timeoutMsg, "--gas", "700000")
+		s.Require().NoError(err)
+	}))
+}
+
 // This is a test to verify that go clients can prove the state of cosmwasm contracts
 func (s *IBCLiteTestSuite) TestWasmProofs() {
 	ctx := context.Background()

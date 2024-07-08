@@ -124,7 +124,6 @@ pub fn on_recv_packet(
 ///
 /// # Errors
 /// Will return an error if the acknowledgement cannot be processed.
-#[allow(clippy::needless_pass_by_value)]
 pub fn on_acknowledgement_packet(
     deps: DepsMut,
     env: Env,
@@ -147,15 +146,14 @@ pub fn on_acknowledgement_packet(
 ///
 /// # Errors
 /// Will return an error if the timeout cannot be processed and tokens refunded.
-#[allow(clippy::needless_pass_by_value)]
 pub fn on_timeout_packet(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _packet: ibc::Packet,
-    _relayer: String,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    packet: ibc::Packet,
+    relayer: String,
 ) -> Result<Response, ContractError> {
-    todo!()
+    on_acknowledgement_packet::error(deps, env, info, packet, "timeout".to_string(), relayer)
 }
 
 mod on_acknowledgement_packet {
@@ -200,16 +198,10 @@ mod on_acknowledgement_packet {
             return Err(TransferError::unexpected_port_id(port_id, packet.source_port).into());
         }
 
-        let base_denom = utils::transfer::parse_voucher_denom(
-            &ics20_packet.denom,
-            port_id.as_str(),
-            packet.source_channel.as_str(),
-        )?;
-
         // Refund the escrowed balance.
         state::ESCROW.update(
             deps.storage,
-            (packet.source_channel.as_str(), base_denom),
+            (packet.source_channel.as_str(), &ics20_packet.denom),
             |escrowed_bal| -> Result<_, ContractError> {
                 let mut escrowed_bal = escrowed_bal.unwrap_or_default();
                 escrowed_bal = escrowed_bal.checked_sub(ics20_packet.amount).map_err(|_| {
@@ -220,7 +212,7 @@ mod on_acknowledgement_packet {
         )?;
 
         let cw20_msg: CosmosMsg = WasmMsg::Execute {
-            contract_addr: base_denom.to_string(),
+            contract_addr: ics20_packet.denom,
             msg: cosmwasm_std::to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
                 recipient: ics20_packet.sender,
                 amount: ics20_packet.amount,

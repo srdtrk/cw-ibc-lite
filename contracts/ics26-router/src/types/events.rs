@@ -10,6 +10,8 @@ pub const EVENT_TYPE_RECV_PACKET: &str = "recv_packet";
 pub const EVENT_TYPE_WRITE_ACKNOWLEDGEMENT: &str = "write_acknowledgement";
 /// `EVENT_TYPE_ACKNOWLEDGE_PACKET` is the event type for an acknowledge packet event
 pub const EVENT_TYPE_ACKNOWLEDGE_PACKET: &str = "acknowledge_packet";
+/// `EVENT_TYPE_TIMEOUT_PACKET` is the event type for a timeout packet event
+pub const EVENT_TYPE_TIMEOUT_PACKET: &str = "timeout_packet";
 
 /// `ATTRIBUTE_KEY_CONTRACT_ADDRESS` is the attribute key for the contract address
 pub const ATTRIBUTE_KEY_CONTRACT_ADDRESS: &str = "contract_address";
@@ -162,6 +164,34 @@ pub mod acknowledge_packet {
     #[must_use]
     pub fn success(packet: &ibc::Packet) -> Event {
         Event::new(super::EVENT_TYPE_ACKNOWLEDGE_PACKET).add_attributes(vec![
+            Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, packet.source_port.as_str()),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_SRC_CHANNEL,
+                packet.source_channel.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_PORT,
+                packet.destination_port.as_str(),
+            ),
+            Attribute::new(
+                super::ATTRIBUTE_KEY_DST_CHANNEL,
+                packet.destination_channel.as_str(),
+            ),
+            Attribute::new(super::ATTRIBUTE_KEY_SEQUENCE, packet.sequence.to_string()),
+        ])
+    }
+}
+
+/// Contains event messages emitted during the reply to
+/// [`cw_ibc_lite_shared::types::apps::callbacks::IbcAppCallbackMsg::OnTimeoutPacket`]
+pub mod timeout_packet {
+    use cosmwasm_std::{Attribute, Event};
+    use cw_ibc_lite_shared::types::ibc;
+
+    /// `timeout_packet` is the event message for a timeout packet event
+    #[must_use]
+    pub fn success(packet: &ibc::Packet) -> Event {
+        Event::new(super::EVENT_TYPE_TIMEOUT_PACKET).add_attributes(vec![
             Attribute::new(super::ATTRIBUTE_KEY_SRC_PORT, packet.source_port.as_str()),
             Attribute::new(
                 super::ATTRIBUTE_KEY_SRC_CHANNEL,

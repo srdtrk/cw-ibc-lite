@@ -371,6 +371,7 @@ dependencies = [
  "cw-ownable",
  "derive_more",
  "ibc-client-cw",
+ "ibc-core-client-types",
  "ibc-core-host",
  "ibc-proto",
  "schemars",
