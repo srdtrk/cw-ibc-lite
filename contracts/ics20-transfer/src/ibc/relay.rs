@@ -149,13 +149,13 @@ pub fn on_acknowledgement_packet(
 /// Will return an error if the timeout cannot be processed and tokens refunded.
 #[allow(clippy::needless_pass_by_value)]
 pub fn on_timeout_packet(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _packet: ibc::Packet,
-    _relayer: String,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    packet: ibc::Packet,
+    relayer: String,
 ) -> Result<Response, ContractError> {
-    todo!()
+    on_acknowledgement_packet::error(deps, env, info, packet, "timeout".to_string(), relayer)
 }
 
 mod on_acknowledgement_packet {

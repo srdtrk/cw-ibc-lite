@@ -45,6 +45,7 @@ cw-ownable = { git = "https://github.com/CyberHoward/cw-plus-plus", branch = "bu
 ibc-core-host = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false, features = ["schema"] }
 ibc-client-cw = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false }
 ibc-client-tendermint = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false, features = ["schema"] }
+ibc-core-client-types = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false }
 cw-ibc-lite-shared = { version = "0.1.0", path = "./packages/shared/" }
 cw-ibc-lite-derive = { version = "0.1.0", path = "./packages/derive/" }
 cw-ibc-lite-ics02-client = { version = "0.1.0", path = "./contracts/ics02-client/", default-features = false }

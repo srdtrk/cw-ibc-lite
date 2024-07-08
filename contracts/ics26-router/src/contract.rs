@@ -116,7 +116,9 @@ mod execute {
         utils,
     };
 
-    use ibc_client_cw::types::VerifyMembershipMsgRaw;
+    use ibc_client_cw::types::{
+        TimestampAtHeightMsg, VerifyMembershipMsgRaw, VerifyNonMembershipMsgRaw,
+    };
 
     #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     pub fn send_packet(
@@ -343,12 +345,100 @@ mod execute {
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn timeout(
-        _deps: DepsMut,
+        deps: DepsMut,
         _env: Env,
-        _info: MessageInfo,
-        _msg: TimeoutMsg,
+        info: MessageInfo,
+        msg: TimeoutMsg,
     ) -> Result<Response, ContractError> {
-        todo!()
+        let packet = msg.packet;
+
+        let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
+        let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
+
+        let ibc_app_address = state::IBC_APPS.load(deps.storage, packet.source_port.as_str())?;
+        let ibc_app_contract = apps::helpers::IbcApplicationContract::new(ibc_app_address);
+
+        // Verify the counterparty.
+        let counterparty = ics02_contract
+            .query(&deps.querier)
+            .client_info(packet.source_channel.as_str())?
+            .counterparty_info
+            .ok_or(ContractError::CounterpartyNotFound)?;
+        if counterparty.client_id != packet.destination_channel.as_str() {
+            return Err(ContractError::invalid_counterparty(
+                counterparty.client_id,
+                packet.destination_channel.into(),
+            ));
+        }
+
+        // NOTE: If commitment cannot be loaded, this indicates that this packet has already been
+        // acknowledged, timed out, or never sent. IBC Go treats this error as a no-op in order to
+        // prevent an entire relay transaction from failing and consuming unnecessary fees. We
+        // don't do this here.
+        let stored_packet_commitment = PureItem::from(ics24_host::PacketCommitmentPath {
+            port_id: packet.source_port.clone(),
+            channel_id: packet.source_channel.clone(),
+            sequence: packet.sequence,
+        })
+        .load(deps.storage)?;
+        if stored_packet_commitment != packet.to_commitment_vec() {
+            return Err(ContractError::packet_commitment_mismatch(
+                stored_packet_commitment,
+                packet.to_commitment_vec(),
+            ));
+        }
+
+        // Verify the timeout timestamp.
+        let timeout_timestamp = packet
+            .timeout
+            .timestamp()
+            .ok_or(ContractError::EmptyTimestamp)?
+            .nanos();
+        let counterparty_timestamp = ics02_contract
+            .query(&deps.querier)
+            .client_querier(packet.source_channel.as_str())?
+            .timestamp_at_height(TimestampAtHeightMsg {
+                height: msg.proof_height.clone().into(),
+            })?
+            .timestamp;
+        if counterparty_timestamp < timeout_timestamp {
+            return Err(ContractError::invalid_timeout_timestamp(
+                counterparty_timestamp,
+                timeout_timestamp,
+            ));
+        }
+
+        // Verify the packet non-membership.
+        let packet_ack_path: ics24_host::MerklePath = ics24_host::PacketReceiptPath {
+            port_id: packet.destination_port.clone(),
+            channel_id: packet.destination_channel.clone(),
+            sequence: packet.sequence,
+        }
+        .to_prefixed_merkle_path(counterparty.merkle_path_prefix)?;
+        let _ = ics02_contract
+            .query(&deps.querier)
+            .client_querier(packet.source_channel.as_str())?
+            .verify_non_membership(VerifyNonMembershipMsgRaw {
+                proof: msg.proof_unreceived.into(),
+                path: packet_ack_path,
+                height: msg.proof_height.into(),
+                delay_time_period: 0,
+                delay_block_period: 0,
+            })?;
+
+        state::helpers::delete_packet_commitment(deps.storage, &packet)?;
+
+        let event = events::timeout_packet::success(&packet);
+        let callback_msg = apps::callbacks::IbcAppCallbackMsg::OnTimeoutPacket {
+            packet,
+            relayer: info.sender.into(),
+        };
+
+        let timeout_callback = ibc_app_contract.call(callback_msg)?;
+
+        Ok(Response::new()
+            .add_message(timeout_callback)
+            .add_event(event))
     }
 
     #[allow(clippy::needless_pass_by_value)]

@@ -140,6 +140,13 @@ impl From<Height> for ibc_proto::ibc::core::client::v1::Height {
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
+impl From<Height> for ibc_core_client_types::Height {
+    fn from(height: Height) -> Self {
+        Self::new(height.revision_number, height.revision_height).unwrap()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::types::transfer::packet::Ics20Ack;
