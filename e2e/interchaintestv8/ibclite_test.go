@@ -121,6 +121,8 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 		s.Require().Len(resp.Contracts, 1)
 		s.Require().NotEmpty(resp.Contracts[0])
 
+		// ics02Client is instantiated by ics26Router, so we need to fetch it from the response
+		// and cast it to the correct type
 		s.ics02Client, err = ics02client.NewContract(resp.Contracts[0], ics02CodeId, wasmd)
 		s.Require().NoError(err)
 	}))
@@ -158,7 +160,6 @@ func (s *IBCLiteTestSuite) SetupSuite(ctx context.Context) {
 				CounterpartyInfo: &ics02client.CounterpartyInfo{
 					ClientId: ibctesting.FirstClientID,
 					MerklePathPrefix: &ics02client.MerklePath{
-						// TODO: make sure this is correct
 						KeyPath: []string{ibcexported.StoreKey, ""},
 					},
 				},
