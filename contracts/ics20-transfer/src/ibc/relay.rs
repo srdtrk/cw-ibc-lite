@@ -124,7 +124,6 @@ pub fn on_recv_packet(
 ///
 /// # Errors
 /// Will return an error if the acknowledgement cannot be processed.
-#[allow(clippy::needless_pass_by_value)]
 pub fn on_acknowledgement_packet(
     deps: DepsMut,
     env: Env,
@@ -147,7 +146,6 @@ pub fn on_acknowledgement_packet(
 ///
 /// # Errors
 /// Will return an error if the timeout cannot be processed and tokens refunded.
-#[allow(clippy::needless_pass_by_value)]
 pub fn on_timeout_packet(
     deps: DepsMut,
     env: Env,
