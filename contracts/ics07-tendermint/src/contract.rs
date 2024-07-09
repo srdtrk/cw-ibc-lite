@@ -23,8 +23,6 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    // cw2::set_contract_version(deps.storage, keys::CONTRACT_NAME, keys::CONTRACT_VERSION)?;
-
     let mut ctx = TendermintContext::new_mut(deps, env)?;
     let data = ctx.instantiate(msg.into())?;
 
