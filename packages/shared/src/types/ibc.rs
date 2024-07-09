@@ -1,7 +1,10 @@
 //! Defines the IBC types used by the contract.
 
+use std::str::FromStr;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, IbcTimeout};
+use ibc_core_host::types::error::IdentifierError;
 use sha2::Digest;
 
 use super::{error::ContractError, paths::identifiers};
@@ -57,6 +60,46 @@ pub struct Height {
 // }
 
 impl Packet {
+    /// Creates a new validated packet with the given parameters.
+    ///
+    /// # Errors
+    /// Fails if any of the identifiers are invalid.
+    pub fn new(
+        sequence: impl Into<identifiers::Sequence>,
+        source_port: &str,
+        source_channel: &str,
+        destination_port: &str,
+        destination_channel: &str,
+        data: Binary,
+        timeout: IbcTimeout,
+    ) -> Result<Self, IdentifierError> {
+        let source_port = identifiers::PortId::from_str(source_port)?;
+        let source_channel = identifiers::ChannelId::from_str(source_channel)?;
+        let destination_port = identifiers::PortId::from_str(destination_port)?;
+        let destination_channel = identifiers::ChannelId::from_str(destination_channel)?;
+        Ok(Self {
+            sequence: sequence.into(),
+            source_port,
+            source_channel,
+            destination_port,
+            destination_channel,
+            data,
+            timeout,
+        })
+    }
+
+    /// Validates the packet identifiers.
+    ///
+    /// # Errors
+    /// Fails if any of the identifiers are invalid.
+    pub fn validate(&self) -> Result<(), IdentifierError> {
+        self.source_port.validate()?;
+        self.destination_port.validate()?;
+        identifiers::ChannelId::from_str(self.source_channel.as_str())?;
+        identifiers::ChannelId::from_str(self.destination_channel.as_str())?;
+        Ok(())
+    }
+
     /// `to_commitment_bytes` serializes the packet to commitment bytes as per [ibc-lite go implementation](https://github.com/cosmos/ibc-go/blob/2b40562bcd59ce820ddd7d6732940728487cf94e/modules/core/04-channel/types/packet.go#L38)
     #[must_use]
     pub fn to_commitment_vec(&self) -> Vec<u8> {
