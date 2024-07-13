@@ -28,7 +28,7 @@ rpath = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-schema = "2.0"
+cosmwasm-schema = "2.1"
 cosmwasm-std = { version = "2.0", features = [
   # Enable this if you only deploy to chains that have CosmWasm 1.4 or higher
   "cosmwasm_2_0",
@@ -41,11 +41,12 @@ schemars = "0.8.16"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
 # TODO: Remove this once cw-ownable is published with cw-plus-plus
-cw-ownable = { git = "https://github.com/CyberHoward/cw-plus-plus", branch = "bump/cosmwasm-2.0" }
-ibc-core-host = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false, features = ["schema"] }
-ibc-client-cw = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false }
-ibc-client-tendermint = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false, features = ["schema"] }
-ibc-core-client-types = { git = "https://github.com/srdtrk/ibc-rs", branch = "serdar/xxx-allow-ibc-lite-paths", default-features = false }
+cw-ownable = { version = "0.6.0", git = "https://github.com/larry0x/cw-plus-plus.git" }
+ibc-core-host = { git = "https://github.com/cosmos/ibc-rs", ref = "e36015c94122faddb2e6cacec464b6c6f9749c91", default-features = false, features = ["schema"] }
+ibc-client-cw = { git = "https://github.com/cosmos/ibc-rs", ref = "e36015c94122faddb2e6cacec464b6c6f9749c91", default-features = false }
+ibc-client-tendermint = { git = "https://github.com/cosmos/ibc-rs", ref = "e36015c94122faddb2e6cacec464b6c6f9749c91", default-features = false, features = ["schema"] }
+ibc-core-client-types = { git = "https://github.com/cosmos/ibc-rs", ref = "e36015c94122faddb2e6cacec464b6c6f9749c91", default-features = false }
+ibc-core-commitment-types = { git = "https://github.com/cosmos/ibc-rs", ref = "e36015c94122faddb2e6cacec464b6c6f9749c91", default-features = false }
 cw-ibc-lite-shared = { version = "0.1.0", path = "./packages/shared/" }
 cw-ibc-lite-derive = { version = "0.1.0", path = "./packages/derive/" }
 cw-ibc-lite-ics02-client = { version = "0.1.0", path = "./contracts/ics02-client/", default-features = false }

@@ -8,7 +8,8 @@ use ibc_core_host::types::path::{
 use crate::types::{error::ContractError, storage::PureItem};
 
 // Re-export merkle path from `ibc-client-cw`
-pub use ibc_client_cw::types::MerklePath;
+pub use ibc_core_commitment_types::merkle::MerklePath;
+pub use ibc_core_host::types::path::PathBytes;
 
 /// Path for the packet commitment.
 #[derive(

@@ -202,7 +202,7 @@ impl From<InstantiateMsg> for ibc_client_cw::types::InstantiateMsg {
             client_state: instantiate_msg.client_state.into(),
             consensus_state: instantiate_msg.consensus_state.into(),
             // TODO: Add checksum
-            checksum: Vec::new(),
+            checksum: cosmwasm_std::Checksum::generate(&[0u8; 32]),
         }
     }
 }
