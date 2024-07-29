@@ -4,7 +4,7 @@ This workspace contains the CosmWasm IBC Lite implementation. IBC lite is a work
 
 This is a implementation of the IBC Protocol in pure Rust and CosmWasm. It would work on CosmWasm chains without the need for `ibc-go`. There are no current relayer implementations for IBC Lite.
 
-This repository is a work in progress and is not ready for production use. This repo also contains the e2e test between cw-eureka and ibc-go-lite.
+This repository is a work in progress and is not ready for production use. This repo also contains the e2e test between cw-ibc-lite and ibc-go-lite.
 
 ## How to reproduce the e2e test
 
