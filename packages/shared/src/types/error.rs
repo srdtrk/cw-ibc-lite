@@ -47,6 +47,10 @@ pub enum ContractError {
         "invalid timeout timestamp: current {current}, timestamp {timestamp} (seconds since epoch)"
     )]
     InvalidTimeoutTimestamp { current: u64, timestamp: u64 },
+    #[error("invalid timeout block: current {current}, block {block}")]
+    InvalidTimeoutBlock { current: u64, block: u64 },
+    #[error("invalid revision number: current {current}, revision {revision}")]
+    InvalidRevisionNumber { current: u64, revision: u64 },
     #[error("empty timestamp")]
     EmptyTimestamp,
     #[error("packet already commited: key: {:02x?}", key)]
@@ -102,6 +106,20 @@ impl ContractError {
     #[must_use]
     pub const fn invalid_timeout_timestamp(current: u64, timestamp: u64) -> Self {
         Self::InvalidTimeoutTimestamp { current, timestamp }
+    }
+
+    /// Returns a new [`ContractError::InvalidTimeoutBlock`] with the given current and block
+    /// values.
+    #[must_use]
+    pub const fn invalid_timeout_block(current: u64, block: u64) -> Self {
+        Self::InvalidTimeoutBlock { current, block }
+    }
+
+    /// Returns a new [`ContractError::InvalidRevisionNumber`] with the given current and revision
+    /// values.
+    #[must_use]
+    pub const fn invalid_revision_number(current: u64, revision: u64) -> Self {
+        Self::InvalidRevisionNumber { current, revision }
     }
 
     /// Returns a new [`ContractError::PacketAlreadyCommited`] with the given key.
