@@ -13,6 +13,11 @@ use crate::types::error::ContractError;
 /// Returns an error if the timeout is not a timestamp or if the timestamp is in the past.
 pub fn validate(env: &Env, timeout: &IbcTimeout) -> Result<(), ContractError> {
     timeout.block().map_or(Ok(()), |b| {
+        if b.height == 0 && b.revision == 0 {
+            // This is a special case where the timeout is not set.
+            return Ok(());
+        }
+
         if env.block.height >= b.height {
             return Err(ContractError::invalid_timeout_block(
                 env.block.height,
