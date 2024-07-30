@@ -16,7 +16,7 @@ pub fn validate(env: &Env, timeout: &IbcTimeout) -> Result<(), ContractError> {
         .timestamp()
         .ok_or(ContractError::EmptyTimestamp)
         .and_then(|ts| {
-            if env.block.time > ts {
+            if env.block.time >= ts {
                 return Err(ContractError::invalid_timeout_timestamp(
                     env.block.time.seconds(),
                     ts.seconds(),

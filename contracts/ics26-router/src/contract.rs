@@ -182,7 +182,7 @@ mod execute {
     #[allow(clippy::needless_pass_by_value)]
     pub fn recv_packet(
         deps: DepsMut,
-        _env: Env,
+        env: Env,
         info: MessageInfo,
         msg: RecvPacketMsg,
     ) -> Result<Response, ContractError> {
@@ -228,6 +228,9 @@ mod execute {
             .query(&deps.querier)
             .client_querier(packet.destination_channel.as_str())?
             .verify_membership(verify_membership_msg)?;
+
+        // Ensure the timeout is valid.
+        utils::timeout::validate(&env, &packet.timeout)?;
 
         state::helpers::set_packet_receipt(deps.storage, &packet)?;
 
