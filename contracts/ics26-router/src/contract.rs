@@ -155,10 +155,10 @@ mod execute {
             state::helpers::new_sequence_send(deps.storage, &msg.source_port, &msg.source_channel)?;
         let packet = ibc::Packet::new(
             sequence,
-            &msg.source_channel,
             &msg.source_port,
-            &counterparty_id,
+            &msg.source_channel,
             &msg.dest_port,
+            &counterparty_id,
             msg.data,
             msg.timeout,
         )?;
