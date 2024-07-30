@@ -33,7 +33,6 @@ pub fn instantiate(
         &deps.querier,
         &env,
         ics02_client::types::msg::InstantiateMsg {},
-        // TODO: ensure there is no DOS attack vector here
         format!("{}.{}", keys::ICS02_CLIENT_SALT, env.contract.address),
         None::<String>,
         keys::ICS02_CLIENT_SALT,
@@ -74,7 +73,6 @@ pub fn execute(
 #[allow(clippy::needless_pass_by_value)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
-        // TODO: Ensure that events are emitted for all the replies.
         keys::reply::ON_RECV_PACKET => {
             reply::write_acknowledgement(deps, env, msg.result, msg.payload)
         }
@@ -149,34 +147,22 @@ mod execute {
             }
         }
 
-        let source_channel = identifiers::ChannelId::from_str(&msg.source_channel)?;
-        let source_port = identifiers::PortId::from_str(&msg.source_port)?;
-        let dest_port = identifiers::PortId::from_str(&msg.dest_port)?;
-        let dest_channel = identifiers::ChannelId::from_str(
-            msg.dest_channel.as_ref().unwrap_or(&counterparty_id),
-        )?;
-
         // Ensure the timeout is valid.
         utils::timeout::validate(&env, &msg.timeout)?;
 
         // Construct the packet.
-        let sequence: identifiers::Sequence = state::helpers::new_sequence_send(
-            deps.storage,
-            source_port.as_str(),
-            source_channel.as_str(),
-        )?
-        .into();
-        let packet = ibc::Packet {
+        let sequence =
+            state::helpers::new_sequence_send(deps.storage, &msg.source_port, &msg.source_channel)?;
+        let packet = ibc::Packet::new(
             sequence,
-            source_channel,
-            source_port,
-            destination_channel: dest_channel,
-            destination_port: dest_port,
-            data: msg.data,
-            timeout: msg.timeout,
-        };
+            &msg.source_port,
+            &msg.source_channel,
+            &msg.dest_port,
+            &counterparty_id,
+            msg.data,
+            msg.timeout,
+        )?;
 
-        // TODO: Ensure it is ok to commit packet and emit events before the callback.
         state::helpers::commit_packet(deps.storage, &packet)?;
 
         let send_packet_event = events::send_packet::success(&packet);
@@ -200,9 +186,8 @@ mod execute {
         info: MessageInfo,
         msg: RecvPacketMsg,
     ) -> Result<Response, ContractError> {
+        msg.packet.validate()?;
         let packet = msg.packet;
-        let proof_commitment = msg.proof_commitment;
-        let proof_height = msg.proof_height;
 
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
         let ics02_contract = ics02_client::helpers::Ics02ClientContract::new(ics02_address);
@@ -232,10 +217,10 @@ mod execute {
         }
         .to_prefixed_merkle_path(counterparty.merkle_path_prefix)?;
         let verify_membership_msg = VerifyMembershipMsgRaw {
-            proof: proof_commitment.into(),
+            proof: msg.proof_commitment.into(),
             path: counterparty_commitment_path,
             value: packet.to_commitment_vec(),
-            height: proof_height.into(),
+            height: msg.proof_height.into(),
             delay_time_period: 0,
             delay_block_period: 0,
         };
@@ -259,7 +244,6 @@ mod execute {
         )
         .with_payload(reply_payload);
 
-        // TODO: Ensure event emission is reverted if the callback fails.
         Ok(Response::new()
             .add_submessage(recv_packet_callback)
             .add_event(event))
@@ -272,6 +256,7 @@ mod execute {
         info: MessageInfo,
         msg: AcknowledgementMsg,
     ) -> Result<Response, ContractError> {
+        msg.packet.validate()?;
         let packet = msg.packet;
 
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
@@ -350,6 +335,7 @@ mod execute {
         info: MessageInfo,
         msg: TimeoutMsg,
     ) -> Result<Response, ContractError> {
+        msg.packet.validate()?;
         let packet = msg.packet;
 
         let ics02_address = state::ICS02_CLIENT_ADDRESS.load(deps.storage)?;
